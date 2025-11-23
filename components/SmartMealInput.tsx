@@ -139,10 +139,10 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 id="meal-editor-title" className="text-2xl font-bold text-neutral-900 tracking-tight">
-              {initialMeal ? t('plan.edit') : t('diary.new')}
+              {initialMeal ? t('common.edit') : t('diary.new')}
             </h3>
             <p className="text-xs font-bold uppercase tracking-wider text-primary-600 mt-1">
-              {activeTab === 'smart' ? 'AI Auto-Parsing' : 'Clinical Manual Entry'}
+              {activeTab === 'smart' ? t('diary.ai') : t('diary.manual_entry')}
             </p>
           </div>
           <button 
@@ -160,8 +160,8 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
             className="absolute top-1 bottom-1 w-1/2 bg-white rounded-xl shadow-sm transition-transform duration-300 ease-out"
             style={{ transform: activeTab === 'smart' ? 'translateX(0)' : 'translateX(100%)' }}
           />
-          <button onClick={() => setActiveTab('smart')} className={`flex-1 relative z-10 py-3 text-sm font-bold transition-colors ${activeTab === 'smart' ? 'text-primary-600' : 'text-neutral-500'}`}>Smart Scan</button>
-          <button onClick={() => setActiveTab('manual')} className={`flex-1 relative z-10 py-3 text-sm font-bold transition-colors ${activeTab === 'manual' ? 'text-primary-600' : 'text-neutral-500'}`}>Manual Detail</button>
+          <button onClick={() => setActiveTab('smart')} className={`flex-1 relative z-10 py-3 text-sm font-bold transition-colors ${activeTab === 'smart' ? 'text-primary-600' : 'text-neutral-500'}`}>{t('diary.smart_scan')}</button>
+          <button onClick={() => setActiveTab('manual')} className={`flex-1 relative z-10 py-3 text-sm font-bold transition-colors ${activeTab === 'manual' ? 'text-primary-600' : 'text-neutral-500'}`}>{t('diary.manual_detail')}</button>
         </div>
 
         {/* SMART MODE */}
@@ -206,7 +206,7 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
               icon={<Sparkles size={20} />}
               className="shadow-glow"
             >
-              {isAnalyzing ? 'Processing Clinical Data...' : t('plan.analyze')}
+              {isAnalyzing ? t('diary.analyzing') : t('diary.analyze')}
             </NutriButton>
 
             {/* Smart Suggestions & Analysis Result */}
@@ -236,7 +236,7 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
                   {suggestions.length > 0 && (
                      <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-100">
                         <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-                           <Sparkles size={12}/> AI Suggestions
+                           <Sparkles size={12}/> {t('diary.ai_suggestions')}
                         </p>
                         <div className="space-y-2">
                            {suggestions.map((s, idx) => (
@@ -264,7 +264,7 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
                         onClick={() => setActiveTab('manual')}
                         className="text-xs font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 py-2"
                         >
-                        Edit Details <ArrowRight size={12} />
+                        {t('diary.edit_details')} <ArrowRight size={12} />
                         </button>
                     </div>
                   )}
@@ -291,7 +291,7 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
                  <div className="flex justify-between items-end mb-5 relative z-10">
                     <div>
                        <p className="text-neutral-400 text-xs font-bold uppercase tracking-wider mb-1 flex items-center gap-1">
-                          <Activity size={12} /> Live Analysis
+                          <Activity size={12} /> {t('diary.live_analysis')}
                        </p>
                        <div className="text-4xl font-mono font-bold tracking-tight text-white flex items-baseline gap-1">
                           {manualValues.calories} <span className="text-sm text-neutral-500 font-sans">kcal</span>
@@ -300,7 +300,7 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
                     {/* Status Badge */}
                     <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold ${manualValues.calories > 800 ? 'bg-red-500/20 text-red-200' : 'bg-primary-500/20 text-primary-200'}`}>
                        {manualValues.calories > 800 ? <AlertTriangle size={12} /> : <Check size={12} />}
-                       {manualValues.calories > 800 ? 'High Density' : 'Balanced'}
+                       {manualValues.calories > 800 ? t('diary.high_density') : t('diary.balanced')}
                     </div>
                  </div>
 
@@ -329,14 +329,14 @@ export const SmartMealInput: React.FC<SmartMealInputProps> = ({ isOpen, onClose,
                     startIcon={<Activity size={16} />}
                  />
                  <div className="grid grid-cols-3 gap-3">
-                    <NutriInput label="Prot (g)" type="number" value={manualValues.protein} onChange={(e) => setManualValues({...manualValues, protein: Number(e.target.value)})} />
-                    <NutriInput label="Carb (g)" type="number" value={manualValues.carbs} onChange={(e) => setManualValues({...manualValues, carbs: Number(e.target.value)})} />
-                    <NutriInput label="Fat (g)" type="number" value={manualValues.fats} onChange={(e) => setManualValues({...manualValues, fats: Number(e.target.value)})} />
+                    <NutriInput label={t('plan.manual.protein')} type="number" value={manualValues.protein} onChange={(e) => setManualValues({...manualValues, protein: Number(e.target.value)})} />
+                    <NutriInput label={t('plan.manual.carbs')} type="number" value={manualValues.carbs} onChange={(e) => setManualValues({...manualValues, carbs: Number(e.target.value)})} />
+                    <NutriInput label={t('plan.manual.fats')} type="number" value={manualValues.fats} onChange={(e) => setManualValues({...manualValues, fats: Number(e.target.value)})} />
                  </div>
               </div>
 
               <NutriButton fullWidth size="lg" onClick={handleSave} className="shadow-lg shadow-primary-500/20">
-                 {initialMeal ? t('plan.save') : t('diary.submit')}
+                 {initialMeal ? t('common.save') : t('diary.submit')}
               </NutriButton>
            </div>
         )}

@@ -10,7 +10,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
-  const { t, language } = useLanguage();
+  const { t, language, formatDate } = useLanguage();
   const [showInsights, setShowInsights] = useState(true);
 
   // --- Derived Metrics ---
@@ -30,15 +30,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
   if (calPercentage > 120) calBarColor = 'bg-error-500'; // Danger
 
   // Date Formatter
-  const dateOptions: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
-  const todayString = new Date().toLocaleDateString(language === 'pt' ? 'pt-BR' : language === 'es' ? 'es-ES' : language === 'zh' ? 'zh-CN' : 'en-US', dateOptions);
+  const todayString = formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' });
 
   // Time of Day Greeting
   const getGreeting = () => {
       const hour = new Date().getHours();
-      if (hour < 12) return "Good Morning";
-      if (hour < 18) return "Good Afternoon";
-      return "Good Evening";
+      if (hour < 12) return t('app.welcome_morning');
+      if (hour < 18) return t('app.welcome_afternoon');
+      return t('app.welcome_evening');
   };
   const greeting = getGreeting();
 
@@ -110,7 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
             <h3 className="text-lg font-bold text-neutral-800 flex items-center gap-1 group-hover:text-primary-600 transition-colors">
                 {t('nav.diary')} <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0" />
             </h3>
-            <p className="text-xs text-neutral-500">{t('stats.daily_deficit')}</p>
+            <p className="text-xs text-neutral-500">{t('dash.daily_deficit')}</p>
           </div>
           <div className="bg-white/50 px-3 py-1 rounded-full border border-white shadow-sm backdrop-blur-md">
              <span className="text-xs font-mono font-bold text-neutral-600">{todayLog.totalCalories} / {targetCals} kcal</span>
@@ -144,10 +143,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
            <button 
              onClick={() => onTabChange('diary')}
              className="w-full h-[52px] bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-2xl shadow-lg shadow-primary-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20"
-             aria-label={t('diary.new')}
+             aria-label={t('dash.register_meal')}
            >
              <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-             {t('diary.new')}
+             {t('dash.register_meal')}
            </button>
         </div>
       </div>
@@ -157,7 +156,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
          <div className="space-y-4">
             <div className="flex items-center justify-between px-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
                <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-                 <Sparkles size={18} className="text-brand-orange" /> Insights
+                 <Sparkles size={18} className="text-brand-orange" /> {t('dash.insights')}
                </h3>
                <button onClick={() => setShowInsights(false)} className="text-neutral-400 hover:text-neutral-600 p-1 rounded-full hover:bg-neutral-100">
                  <X size={16} />
@@ -179,15 +178,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
                      <Sparkles size={20} className="text-white" />
                   </div>
                   <div>
-                     <span className="inline-block px-2 py-0.5 bg-white/20 rounded-md text-[10px] font-bold uppercase tracking-wider mb-2 backdrop-blur-sm">Pattern Detected</span>
+                     <span className="inline-block px-2 py-0.5 bg-white/20 rounded-md text-[10px] font-bold uppercase tracking-wider mb-2 backdrop-blur-sm">{t('dash.pattern_detected')}</span>
                      <h4 className="font-bold text-lg mb-1">{data.clinicalReport?.behavioralInsights?.[0] || "Macronutrient Gap"}</h4>
                      <p className="text-orange-50 text-sm leading-relaxed mb-4">
-                        {data.clinicalReport?.behavioralInsights?.[0] ? "Consistent with your report analysis." : "We detected a lower protein intake during lunch. Bumping this up may reduce afternoon cravings."}
+                        {data.clinicalReport?.behavioralInsights?.[0] ? t('dash.pattern_consistent') : t('dash.pattern_suggestion')}
                      </p>
                      
                      <div className="flex gap-3">
                         <span className="px-4 py-2 bg-white text-brand-orange font-bold text-sm rounded-xl shadow-sm hover:bg-orange-50 transition-colors inline-block">
-                           View Details
+                           {t('common.view_details')}
                         </span>
                      </div>
                   </div>
@@ -201,7 +200,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
           <div className="flex items-center justify-between mb-4 px-2">
              <h3 className="text-lg font-bold text-neutral-900">{t('nav.projections')}</h3>
              <button onClick={() => onTabChange('health-stats')} className="text-primary-600 text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all">
-                View Report <ArrowRight size={16} />
+                {t('common.view_details')} <ArrowRight size={16} />
              </button>
           </div>
           
@@ -209,7 +208,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onTabChange }) => {
              <HealthStats profile={data.profile} plan={data.weeklyPlan} report={data.clinicalReport || undefined} />
           ) : (
             <div className="p-8 text-center bg-white/40 border border-neutral-100 border-dashed rounded-3xl text-neutral-400">
-               Generate a plan to see projections.
+               {t('dash.create_plan')}
             </div>
           )}
       </div>

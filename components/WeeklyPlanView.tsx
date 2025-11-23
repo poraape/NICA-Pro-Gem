@@ -10,7 +10,7 @@ interface WeeklyPlanViewProps {
 }
 
 export const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ plan, onUpdatePlan }) => {
-  const { t } = useLanguage();
+  const { t, formatDate } = useLanguage();
   const [expandedDay, setExpandedDay] = useState<string>(plan.days[0].day);
   const [editingMealContext, setEditingMealContext] = useState<{ dayIndex: number; mealIndex: number; meal: MealItem } | null>(null);
 

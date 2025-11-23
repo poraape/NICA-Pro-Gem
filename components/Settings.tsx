@@ -27,7 +27,7 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
       ...profile,
       consent: { ...profile.consent, [key]: val }
     });
-    showToast(`Privacy setting updated`, 'success');
+    showToast(t('settings.privacy') + ' updated', 'success');
   };
 
   const handleExport = (format: 'json' | 'csv') => {
@@ -38,7 +38,7 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-    showToast(`Data exported as ${format.toUpperCase()}`, 'success');
+    showToast(`${t('common.export')} ${format.toUpperCase()} ${t('common.confirm')}`, 'success');
   };
 
   return (
@@ -47,15 +47,15 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
          <div className="bg-neutral-100 p-2 rounded-xl text-neutral-600">
             <User size={24} />
          </div>
-         <h2 className="text-2xl font-bold text-neutral-900">Settings & Controls</h2>
+         <h2 className="text-2xl font-bold text-neutral-900">{t('settings.title')}</h2>
       </div>
 
       {/* Navigation Tabs */}
       <div className="flex p-1 bg-neutral-100 rounded-xl overflow-x-auto no-scrollbar">
          {[
-           {id: 'general', label: 'General', icon: Smartphone},
-           {id: 'privacy', label: 'Privacy & Consent', icon: Shield},
-           {id: 'data', label: 'Data & Export', icon: Download},
+           {id: 'general', label: t('settings.general'), icon: Smartphone},
+           {id: 'privacy', label: t('settings.privacy'), icon: Shield},
+           {id: 'data', label: t('settings.data'), icon: Download},
          ].map(tab => (
            <button
              key={tab.id}
@@ -75,24 +75,24 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
         {activeTab === 'general' && (
            <div className="space-y-6 animate-slide-up">
               <section>
-                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">Application Experience</h3>
+                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">{t('settings.app_experience')}</h3>
                  <div className="space-y-1">
                     <Toggle 
-                      label="Reduced Motion" 
-                      description="Minimize animations for a simpler, faster feel" 
+                      label={t('settings.reduced_motion')}
+                      description={t('settings.reduced_motion_desc')}
                       checked={isReducedMotion} 
                       onChange={toggleReducedMotion} 
                     />
                     <Toggle 
-                      label="Haptic Feedback" 
-                      description="Vibrate on success, error, and interaction" 
+                      label={t('settings.haptic')}
+                      description={t('settings.haptic_desc')}
                       checked={true} 
                       onChange={() => {}} 
-                      disabled={true} // Mock: Haptic is always on for this demo
+                      disabled={true} 
                     />
                     <Toggle 
-                      label="Smart Notifications" 
-                      description="Receive AI-driven meal reminders" 
+                      label={t('settings.notifications')}
+                      description={t('settings.notifications_desc')}
                       checked={profile.consent.notifications} 
                       onChange={(v) => handleConsentChange('notifications', v)} 
                     />
@@ -100,7 +100,7 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
               </section>
 
               <section>
-                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4 mt-6">Language / Idioma</h3>
+                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4 mt-6">{t('settings.language')}</h3>
                  <div className="grid grid-cols-2 gap-3">
                     {['en', 'pt', 'es', 'zh'].map((code) => (
                        <button 
@@ -123,28 +123,28 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
               <div className="bg-primary-50 p-4 rounded-xl flex gap-3 text-primary-800 border border-primary-100">
                  <Shield className="shrink-0" size={20} />
                  <div>
-                    <p className="font-bold text-sm">Your Data is Yours</p>
-                    <p className="text-xs mt-1 leading-relaxed opacity-90">We process health data locally where possible. Consents can be revoked at any time.</p>
+                    <p className="font-bold text-sm">{t('settings.data_yours')}</p>
+                    <p className="text-xs mt-1 leading-relaxed opacity-90">{t('settings.data_desc')}</p>
                  </div>
               </div>
 
               <section>
-                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">Granular Consent</h3>
+                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-4">{t('settings.granular_consent')}</h3>
                  <Toggle 
-                    label="Health Data Processing" 
-                    description="Allow algorithms to analyze your biometrics for diet generation (Required)" 
+                    label={t('settings.consent_processing')} 
+                    description={t('settings.consent_processing_desc')}
                     checked={profile.consent.dataProcessing} 
                     onChange={(v) => handleConsentChange('dataProcessing', v)} 
                  />
                  <Toggle 
-                    label="Camera & OCR" 
-                    description="Process images for food recognition" 
+                    label={t('settings.consent_camera')} 
+                    description={t('settings.consent_camera_desc')}
                     checked={profile.consent.camera} 
                     onChange={(v) => handleConsentChange('camera', v)} 
                  />
                  <Toggle 
-                    label="Usage Analytics" 
-                    description="Share anonymous logs to help improve NICA-Pro" 
+                    label={t('settings.consent_analytics')} 
+                    description={t('settings.consent_analytics_desc')}
                     checked={profile.consent.analytics} 
                     onChange={(v) => handleConsentChange('analytics', v)} 
                  />
@@ -152,7 +152,7 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
               
               <div className="mt-4 pt-4 border-t border-neutral-100">
                  <button className="text-sm font-medium text-primary-600 flex items-center gap-1 hover:underline">
-                    View Privacy Policy <ChevronRight size={14} />
+                    {t('settings.view_policy')} <ChevronRight size={14} />
                  </button>
               </div>
            </div>
@@ -166,26 +166,26 @@ export const Settings: React.FC<SettingsProps> = ({ profile, onUpdateProfile, on
                     <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-600 mb-3">
                        <FileText size={20} />
                     </div>
-                    <h4 className="font-bold text-neutral-900">Export JSON</h4>
-                    <p className="text-xs text-neutral-500 mt-1">Full raw data dump.</p>
+                    <h4 className="font-bold text-neutral-900">{t('settings.export_json')}</h4>
+                    <p className="text-xs text-neutral-500 mt-1">{t('settings.export_json_desc')}</p>
                  </div>
                  <div className="p-5 border border-neutral-200 rounded-2xl bg-white hover:shadow-md transition-shadow cursor-pointer active:scale-95 duration-200" onClick={() => handleExport('csv')}>
                     <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center text-neutral-600 mb-3">
                        <FileText size={20} />
                     </div>
-                    <h4 className="font-bold text-neutral-900">Export CSV</h4>
-                    <p className="text-xs text-neutral-500 mt-1">Spreadsheet compatible.</p>
+                    <h4 className="font-bold text-neutral-900">{t('settings.export_csv')}</h4>
+                    <p className="text-xs text-neutral-500 mt-1">{t('settings.export_csv_desc')}</p>
                  </div>
               </section>
 
               <section className="pt-6 border-t border-neutral-200">
                  <h3 className="text-xs font-bold text-error-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <AlertTriangle size={14} /> Danger Zone
+                    <AlertTriangle size={14} /> {t('settings.danger_zone')}
                  </h3>
                  <div className="flex items-center justify-between p-4 bg-error-50 border border-error-100 rounded-xl">
                     <div>
-                       <p className="font-bold text-error-900">Delete Account</p>
-                       <p className="text-xs text-error-700 mt-1">Permanently remove all data.</p>
+                       <p className="font-bold text-error-900">{t('settings.delete_account')}</p>
+                       <p className="text-xs text-error-700 mt-1">{t('settings.delete_account_desc')}</p>
                     </div>
                     <button 
                       onClick={onDeleteAccount}

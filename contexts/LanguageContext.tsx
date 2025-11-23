@@ -6,6 +6,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -18,8 +19,19 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return translations[language][key] || key;
   };
 
+  const formatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions): string => {
+    const d = new Date(date);
+    const localeMap = {
+      en: 'en-US',
+      pt: 'pt-BR',
+      es: 'es-ES',
+      zh: 'zh-CN'
+    };
+    return new Intl.DateTimeFormat(localeMap[language], options).format(d);
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, formatDate }}>
       {children}
     </LanguageContext.Provider>
   );

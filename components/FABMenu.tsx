@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { Plus, Camera, Droplet, Utensils, X } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface FABMenuProps {
   onAction: (action: string) => void;
 }
 
 export const FABMenu: React.FC<FABMenuProps> = ({ onAction }) => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggle = () => setIsOpen(!isOpen);
 
   const actions = [
-    { id: 'water', label: 'Log Water', icon: Droplet, color: 'bg-secondary-500' },
-    { id: 'scan', label: 'Scan Meal', icon: Camera, color: 'bg-neutral-800' },
-    { id: 'meal', label: 'Add Meal', icon: Utensils, color: 'bg-primary-500' },
+    { id: 'water', label: t('fab.log_water'), icon: Droplet, color: 'bg-secondary-500' },
+    { id: 'scan', label: t('fab.scan_meal'), icon: Camera, color: 'bg-neutral-800' },
+    { id: 'meal', label: t('fab.add_meal'), icon: Utensils, color: 'bg-primary-500' },
   ];
 
   return (

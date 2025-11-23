@@ -39,12 +39,6 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
     target: tdee
   }));
 
-  const macroDistribution = [
-    { name: 'Protein', value: plan.averageMacros.protein * 4, color: '#0ea5e9' },
-    { name: 'Carbs', value: plan.averageMacros.carbs * 4, color: '#10b981' },
-    { name: 'Fats', value: plan.averageMacros.fats * 9, color: '#f59e0b' }
-  ];
-
   const microData = [
      { subject: 'Iron', A: 80, fullMark: 100 },
      { subject: 'Calcium', A: 90, fullMark: 100 },
@@ -84,8 +78,8 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
           <div className="bg-white/80 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-neutral-200 inline-flex">
              {[
                {id: 'overview', label: t('stats.projections'), icon: Target},
-               {id: 'micros', label: 'Micronutrients', icon: Info},
-               {id: 'coaching', label: 'Coaching', icon: Brain}
+               {id: 'micros', label: t('stats.micronutrients'), icon: Info},
+               {id: 'coaching', label: t('stats.coaching'), icon: Brain}
              ].map(tab => (
                 <button
                    key={tab.id}
@@ -99,7 +93,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
           </div>
           
           <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-neutral-800 text-white rounded-xl shadow-lg hover:bg-neutral-700 transition-colors text-sm font-bold">
-             <Download size={16} /> Export
+             <Download size={16} /> {t('common.export')}
           </button>
        </div>
 
@@ -117,9 +111,9 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
                        </h2>
                        <div className="flex items-end gap-4 mb-2">
                           <div>
-                             <p className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Estimated Goal Date</p>
+                             <p className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">{t('stats.goal_date')}</p>
                              <p className="text-3xl font-bold text-white">
-                                {weeksToGoal < 100 ? `${Math.ceil(weeksToGoal)} Weeks` : 'Maintenance'}
+                                {weeksToGoal < 100 ? `${Math.ceil(weeksToGoal)} Weeks` : t('stats.maintenance')}
                              </p>
                           </div>
                           {deficit !== 0 && (
@@ -150,7 +144,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
                    <div className="bg-white/10 rounded-2xl p-5 border border-white/10 backdrop-blur-md flex flex-col justify-between">
                        <div className="flex justify-between items-start">
                           <div>
-                             <p className="text-indigo-200 text-xs font-bold uppercase tracking-wider">Plan Quality</p>
+                             <p className="text-indigo-200 text-xs font-bold uppercase tracking-wider">{t('stats.plan_quality')}</p>
                              <p className="text-4xl font-bold text-white mt-1">{overallScore}</p>
                           </div>
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${overallScore > 80 ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'}`}>
@@ -160,7 +154,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
                        
                        <div className="mt-4 pt-4 border-t border-white/10">
                           <div className="flex justify-between items-center">
-                             <span className="text-sm text-indigo-100">Daily Caloric Gap</span>
+                             <span className="text-sm text-indigo-100">{t('stats.caloric_gap')}</span>
                              <span className={`text-xl font-mono font-bold ${deficit > 0 ? 'text-green-300' : 'text-amber-300'}`}>
                                 {deficit > 0 ? '-' : '+'}{Math.abs(deficit)}
                              </span>
@@ -172,7 +166,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
 
             {/* 2. Alert Stack (Expandable) */}
             <div className="space-y-3">
-               <h3 className="text-lg font-bold text-neutral-900 px-1">Clinical Alerts & Risks</h3>
+               <h3 className="text-lg font-bold text-neutral-900 px-1">{t('stats.alerts')}</h3>
                {alerts.map((alert, index) => (
                   <div 
                     key={index}
@@ -201,7 +195,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
                            </div>
                            {expandedAlert === index && (
                               <div className="mt-3 text-sm text-neutral-600 border-t border-neutral-100 pt-3 animate-fade-in leading-relaxed">
-                                 <p className="font-semibold mb-1 text-xs uppercase tracking-wider text-neutral-400">Clinical Context</p>
+                                 <p className="font-semibold mb-1 text-xs uppercase tracking-wider text-neutral-400">{t('stats.clinical_context')}</p>
                                  {alert.detail}
                               </div>
                            )}
@@ -215,7 +209,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-glass border border-white/50">
                   <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
-                     <TrendingUp size={18} className="text-primary-500" /> Weight Trend
+                     <TrendingUp size={18} className="text-primary-500" /> {t('stats.weight_trend')}
                   </h3>
                   <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
@@ -238,7 +232,7 @@ export const HealthStats: React.FC<HealthStatsProps> = ({ profile, plan, report 
 
                 <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-glass border border-white/50">
                   <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
-                     <CheckCircle size={18} className="text-primary-500" /> Caloric Adherence
+                     <CheckCircle size={18} className="text-primary-500" /> {t('stats.caloric_adherence')}
                   </h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">

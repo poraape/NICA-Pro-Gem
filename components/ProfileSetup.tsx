@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, Gender, ActivityLevel, OnboardingMode, Biometrics, GoalItem, RoutineData } from '../types';
 import { NutriInput } from './NutriInput';
 import { NutriSelect } from './NutriSelect';
@@ -17,35 +17,39 @@ interface ProfileSetupProps {
   isEditing?: boolean;
 }
 
-// ------------------- STEPS CONFIGURATION -------------------
-// 10 Modules as requested in PROMPT 1
-const STEPS_COMPLETE = [
-  { id: 'mode', icon: Zap, label: 'Intro' },
-  { id: 'bio', icon: User, label: 'Bio' },         // M1: Antropometria
-  { id: 'goals', icon: Target, label: 'Goals' },    // M2: Objetivos
-  { id: 'diet', icon: Utensils, label: 'Diet' },    // M3: Preferências
-  { id: 'routine', icon: Clock, label: 'Routine' }, // M4: Rotina
-  { id: 'allergy', icon: AlertTriangle, label: 'Allergy' }, // M5: Alergias/Restrições
-  { id: 'clinical', icon: Stethoscope, label: 'Health' }, // M6: Clínico
-  { id: 'activity', icon: Activity, label: 'Move' }, // M7: Atividade
-  { id: 'chrono', icon: Moon, label: 'Sleep' },      // M8: Sono/Crononutrição
-  { id: 'privacy', icon: Lock, label: 'Consent' },   // M9: Consentimento
-  { id: 'review', icon: CheckCircle2, label: 'Review' } // M10: Revisão
-];
-
-const STEPS_EXPRESS = [
-  { id: 'mode', icon: Zap, label: 'Intro' },
-  { id: 'bio', icon: User, label: 'Bio' },
-  { id: 'goals', icon: Target, label: 'Goals' },
-  { id: 'privacy', icon: Lock, label: 'Consent' },
-  { id: 'review', icon: CheckCircle2, label: 'Review' }
-];
-
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave, isEditing = false }) => {
   const { t, language } = useLanguage();
   const [stepIndex, setStepIndex] = useState(isEditing ? 1 : 0);
   const [mode, setMode] = useState<OnboardingMode>('complete');
   
+  // ------------------- STEPS CONFIGURATION -------------------
+  // Dynamic labels based on language
+  const steps = useMemo(() => {
+    const complete = [
+      { id: 'mode', icon: Zap, label: t('step.intro') },
+      { id: 'bio', icon: User, label: t('step.bio') },
+      { id: 'goals', icon: Target, label: t('step.goals') },
+      { id: 'diet', icon: Utensils, label: t('step.diet') },
+      { id: 'routine', icon: Clock, label: t('step.routine') },
+      { id: 'allergy', icon: AlertTriangle, label: t('step.allergy') },
+      { id: 'clinical', icon: Stethoscope, label: t('step.health') },
+      { id: 'activity', icon: Activity, label: t('step.move') },
+      { id: 'chrono', icon: Moon, label: t('step.sleep') },
+      { id: 'privacy', icon: Lock, label: t('step.consent') },
+      { id: 'review', icon: CheckCircle2, label: t('step.review') }
+    ];
+
+    const express = [
+      { id: 'mode', icon: Zap, label: t('step.intro') },
+      { id: 'bio', icon: User, label: t('step.bio') },
+      { id: 'goals', icon: Target, label: t('step.goals') },
+      { id: 'privacy', icon: Lock, label: t('step.consent') },
+      { id: 'review', icon: CheckCircle2, label: t('step.review') }
+    ];
+
+    return { complete, express };
+  }, [t]);
+
   // ------------------- STATE -------------------
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     onboardingMode: 'complete',
@@ -84,7 +88,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [liveMetrics, setLiveMetrics] = useState({ bmr: 0, tdee: 0 });
 
-  const currentSteps = mode === 'express' ? STEPS_EXPRESS : STEPS_COMPLETE;
+  const currentSteps = mode === 'express' ? steps.express : steps.complete;
   const currentStepId = currentSteps[stepIndex]?.id || 'mode';
 
   // ------------------- EFFECTS -------------------
@@ -273,7 +277,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                   <p className="text-sm text-neutral-500 leading-relaxed">{t('setup.express.desc')}</p>
                </button>
                <button onClick={() => { setMode('complete'); setStepIndex(1); vibrate(); }} className="group p-8 border-2 border-primary-500 bg-primary-50/30 backdrop-blur rounded-3xl shadow-glow text-left relative overflow-hidden transition-all duration-300 transform hover:-translate-y-1">
-                  <div className="absolute top-0 right-0 bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">RECOMMENDED</div>
+                  <div className="absolute top-0 right-0 bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">{t('common.recommended')}</div>
                   <div className="bg-primary-600 w-12 h-12 flex items-center justify-center rounded-xl text-white mb-4 group-hover:scale-110 transition-transform"><CheckCircle2 size={24} /></div>
                   <h3 className="font-bold text-xl text-neutral-900 mb-2">{t('setup.complete')}</h3>
                   <p className="text-sm text-neutral-700 leading-relaxed">{t('setup.complete.desc')}</p>
@@ -309,7 +313,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M2: GOALS --- */}
         {currentStepId === 'goals' && (
           <div className="space-y-8 relative z-10 animate-fade-in">
-             {renderHeader('Prioritize Objectives', 'Drag to reorder importance', <Target size={32}/>)}
+             {renderHeader(t('setup.goals.title'), t('setup.goals.desc'), <Target size={32}/>)}
              <div className="space-y-3">
                 {profile.goals?.prioritizedGoals?.map((goal, idx) => (
                   <div key={goal.id} className="flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-2xl shadow-sm transition-all hover:border-primary-300">
@@ -320,13 +324,13 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                     <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm">
                       {goal.priority}
                     </div>
-                    <div className="flex-1 font-semibold text-neutral-800">{goal.type}</div>
+                    <div className="flex-1 font-semibold text-neutral-800">{t(`opt.${goal.id}`) || goal.type}</div>
                     <GripVertical className="text-neutral-300 cursor-grab" />
                   </div>
                 ))}
              </div>
              <div className="pt-4">
-               <NutriInput label="Core Motivation" value={profile.goals?.motivation || ''} onChange={e => setProfile(p => ({...p, goals: {...p.goals!, motivation: e.target.value}}))} placeholder="E.g. Wedding in 3 months" startIcon={<Heart size={18} className="text-primary-400"/>} />
+               <NutriInput label={t('label.core_motivation')} value={profile.goals?.motivation || ''} onChange={e => setProfile(p => ({...p, goals: {...p.goals!, motivation: e.target.value}}))} placeholder="E.g. Wedding in 3 months" startIcon={<Heart size={18} className="text-primary-400"/>} />
              </div>
           </div>
         )}
@@ -334,22 +338,22 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M3: PREFERENCES (Diet) --- */}
         {currentStepId === 'diet' && (
           <div className="space-y-8 relative z-10 animate-fade-in">
-             {renderHeader(t('setup.routine'), 'Preferences & Lifestyle', <Utensils size={32}/>)}
+             {renderHeader(t('setup.diet.title'), t('setup.diet'), <Utensils size={32}/>)}
              <div className="grid grid-cols-2 gap-6">
                 <NutriSelect label={t('label.diet')} options={['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'mediterranean'].map(v => ({value: v, label: v}))} value={profile.routine?.dietaryPreference} onChange={e => handleRoutineChange('dietaryPreference', e.target.value)} />
-                <NutriSelect label={t('label.cooking')} options={['low', 'medium', 'high'].map(v => ({value: v, label: v}))} value={profile.routine?.cookingTime} onChange={e => handleRoutineChange('cookingTime', e.target.value)} />
+                <NutriSelect label={t('label.cooking')} options={['low', 'medium', 'high'].map(v => ({value: v, label: t(`opt.${v}`)}))} value={profile.routine?.cookingTime} onChange={e => handleRoutineChange('cookingTime', e.target.value)} />
              </div>
-             <NutriInput label="Disliked Foods" value={inputs.dislikes} onChange={e => handleTextListChange('dislikes', e.target.value)} placeholder="E.g. Cilantro, Okra..." />
+             <NutriInput label={t('label.dislikes')} value={inputs.dislikes} onChange={e => handleTextListChange('dislikes', e.target.value)} placeholder="E.g. Cilantro, Okra..." />
           </div>
         )}
 
         {/* --- M4: ROUTINE --- */}
         {currentStepId === 'routine' && (
            <div className="space-y-8 relative z-10 animate-fade-in">
-              {renderHeader('Daily Rhythm', 'Meal timing and frequency', <Clock size={32}/>)}
+              {renderHeader(t('setup.routine.title'), t('setup.routine.desc'), <Clock size={32}/>)}
               <div className="bg-white/50 p-6 rounded-3xl border border-neutral-200">
                  <div className="flex justify-between items-center mb-6">
-                    <span className="font-bold text-neutral-700">Meals per Day</span>
+                    <span className="font-bold text-neutral-700">{t('label.meals_per_day')}</span>
                     <span className="text-2xl font-bold text-primary-600">{profile.routine?.mealsPerDay}</span>
                  </div>
                  <input 
@@ -362,17 +366,17 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                     <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
                  </div>
               </div>
-              <NutriInput label="Preferred Times" value={profile.routine?.preferredMealTimes} onChange={e => handleRoutineChange('preferredMealTimes', e.target.value)} helperText="Comma separated (e.g. 08:00, 12:00)" />
-              <NutriSelect label="Social Context" options={[{value: 'Alone', label: 'Mostly Alone'}, {value: 'Family', label: 'With Family'}, {value: 'Social', label: 'Frequent Events'}]} value={profile.routine?.socialContext} onChange={e => handleRoutineChange('socialContext', e.target.value)} />
+              <NutriInput label={t('label.preferred_times')} value={profile.routine?.preferredMealTimes} onChange={e => handleRoutineChange('preferredMealTimes', e.target.value)} helperText="Comma separated (e.g. 08:00, 12:00)" />
+              <NutriSelect label={t('label.social_context')} options={[{value: 'Alone', label: t('opt.alone')}, {value: 'Family', label: t('opt.family')}, {value: 'Social', label: t('opt.social')}]} value={profile.routine?.socialContext} onChange={e => handleRoutineChange('socialContext', e.target.value)} />
            </div>
         )}
 
         {/* --- M5: ALLERGIES --- */}
         {currentStepId === 'allergy' && (
             <div className="space-y-8 relative z-10 animate-fade-in">
-                {renderHeader('Restrictions', 'Allergies & Intolerances', <AlertTriangle size={32}/>)}
+                {renderHeader(t('setup.allergy.title'), t('setup.allergy.desc'), <AlertTriangle size={32}/>)}
                 <div className="space-y-4">
-                    <label className="text-sm font-medium text-neutral-600 ml-1">Common Allergens</label>
+                    <label className="text-sm font-medium text-neutral-600 ml-1">{t('label.allergies')}</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {['Gluten', 'Dairy', 'Nuts', 'Shellfish', 'Pork', 'Eggs'].map(item => {
                         const isSelected = inputs.allergies.includes(item);
@@ -391,7 +395,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                         )
                     })}
                     </div>
-                    <NutriInput label="Other Allergies" value={inputs.allergies} onChange={e => handleTextListChange('allergies', e.target.value)} placeholder="Type specific allergies..." />
+                    <NutriInput label={t('label.allergies')} value={inputs.allergies} onChange={e => handleTextListChange('allergies', e.target.value)} placeholder="Type specific allergies..." />
                 </div>
             </div>
         )}
@@ -399,12 +403,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M6: CLINICAL --- */}
         {currentStepId === 'clinical' && (
            <div className="space-y-8 relative z-10 animate-fade-in">
-              {renderHeader('Health Profile', 'Confidential medical context', <Stethoscope size={32}/>)}
-              <NutriInput label="Diagnosed Conditions" value={inputs.conditions} onChange={e => handleTextListChange('conditions', e.target.value)} startIcon={<Activity size={18}/>} placeholder="Diabetes, Hypertension, PCOS..." />
-              <NutriInput label="Medications & Supplements" value={inputs.meds} onChange={e => handleTextListChange('meds', e.target.value)} startIcon={<Pill size={18}/>} placeholder="Metformin 500mg, Whey Protein..." />
+              {renderHeader(t('setup.health.title'), t('setup.health.desc'), <Stethoscope size={32}/>)}
+              <NutriInput label={t('label.medical')} value={inputs.conditions} onChange={e => handleTextListChange('conditions', e.target.value)} startIcon={<Activity size={18}/>} placeholder="Diabetes, Hypertension, PCOS..." />
+              <NutriInput label={t('label.medications')} value={inputs.meds} onChange={e => handleTextListChange('meds', e.target.value)} startIcon={<Pill size={18}/>} placeholder="Metformin 500mg, Whey Protein..." />
               <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3 text-sm text-amber-800">
                  <Lock className="shrink-0" size={18} />
-                 <p className="leading-relaxed">Your health data is encrypted locally and only used to prevent contraindications in your meal plan generation.</p>
+                 <p className="leading-relaxed">{t('setup.health_encrypt')}</p>
               </div>
            </div>
         )}
@@ -412,12 +416,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M7: ACTIVITY --- */}
         {currentStepId === 'activity' && (
            <div className="space-y-8 relative z-10 animate-fade-in">
-              {renderHeader('Movement', 'Activity expenditure estimation', <Activity size={32}/>)}
-              <NutriSelect label={t('label.activity')} options={Object.values(ActivityLevel).map(v => ({value: v, label: v}))} value={profile.lifestyle?.activityLevel} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, activityLevel: e.target.value as any}}))} />
+              {renderHeader(t('setup.move.title'), t('setup.move.desc'), <Activity size={32}/>)}
+              <NutriSelect label={t('label.activity')} options={Object.values(ActivityLevel).map(v => ({value: v, label: t(`opt.${v.toLowerCase().split(' ')[0]}`) || v}))} value={profile.lifestyle?.activityLevel} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, activityLevel: e.target.value as any}}))} />
               <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
                  <div className="flex items-center gap-3 mb-4">
                     <div className="bg-primary-100 p-2 rounded-lg text-primary-600"><Zap size={20}/></div>
-                    <span className="font-bold text-neutral-800">Workouts / Week</span>
+                    <span className="font-bold text-neutral-800">{t('label.workouts')}</span>
                  </div>
                  <div className="flex gap-2">
                     {[0, 1, 2, 3, 4, 5, 6, 7].map(n => (
@@ -427,7 +431,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
               </div>
               <div className="flex items-center gap-3 text-neutral-500 text-sm p-4 bg-neutral-50 rounded-xl">
                  <Watch size={20} />
-                 <span>Wearable import unavailable (Web Mode)</span>
+                 <span>{t('setup.wearable_unavailable')}</span>
               </div>
            </div>
         )}
@@ -435,19 +439,19 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M8: CHRONO --- */}
         {currentStepId === 'chrono' && (
            <div className="space-y-8 relative z-10 animate-fade-in">
-              {renderHeader('Sleep & Rhythm', 'Circadian Optimization', <Moon size={32}/>)}
+              {renderHeader(t('setup.sleep.title'), t('setup.sleep.desc'), <Moon size={32}/>)}
               <div className="grid grid-cols-2 gap-6">
-                 <NutriInput label="Bed Time" type="time" value={profile.lifestyle?.bedTime} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, bedTime: e.target.value}}))} />
-                 <NutriInput label="Wake Time" type="time" value={profile.lifestyle?.wakeTime} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, wakeTime: e.target.value}}))} />
+                 <NutriInput label={t('label.bed_time')} type="time" value={profile.lifestyle?.bedTime} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, bedTime: e.target.value}}))} />
+                 <NutriInput label={t('label.wake_time')} type="time" value={profile.lifestyle?.wakeTime} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, wakeTime: e.target.value}}))} />
               </div>
               <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-4">
                  <Moon className="text-indigo-500" size={24} />
                  <div>
-                    <h4 className="font-bold text-indigo-900">Sleep Quality</h4>
+                    <h4 className="font-bold text-indigo-900">{t('label.sleep')}</h4>
                     <p className="text-xs text-indigo-600 mb-2">Impacts cortisol & insulin sensitivity</p>
                     <div className="flex gap-2 mt-2">
                        {['poor', 'average', 'good', 'excellent'].map(q => (
-                          <button key={q} onClick={() => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, sleepQuality: q as any}}))} className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition-colors ${profile.lifestyle?.sleepQuality === q ? 'bg-indigo-500 text-white' : 'bg-white text-indigo-300'}`}>{q}</button>
+                          <button key={q} onClick={() => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, sleepQuality: q as any}}))} className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition-colors ${profile.lifestyle?.sleepQuality === q ? 'bg-indigo-500 text-white' : 'bg-white text-indigo-300'}`}>{t(`opt.${q}`)}</button>
                        ))}
                     </div>
                  </div>
@@ -458,12 +462,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M9: CONSENT --- */}
         {currentStepId === 'privacy' && (
            <div className="space-y-8 relative z-10 animate-fade-in">
-              {renderHeader('Data Consent', 'You own your data', <Lock size={32}/>)}
+              {renderHeader(t('setup.consent.title'), t('setup.consent.desc'), <Lock size={32}/>)}
               <div className="space-y-4">
                  {[
-                   { k: 'dataProcessing', l: 'Processing of health data for diet generation', req: true },
-                   { k: 'camera', l: 'Camera access for Meal Scanning (OCR)', req: false },
-                   { k: 'analytics', l: 'Anonymous usage analytics', req: false }
+                   { k: 'dataProcessing', l: t('settings.consent_processing'), req: true },
+                   { k: 'camera', l: t('settings.consent_camera'), req: false },
+                   { k: 'analytics', l: t('settings.consent_analytics'), req: false }
                  ].map((item) => (
                     <label key={item.k} className={`flex items-center gap-4 p-5 bg-white border rounded-2xl cursor-pointer hover:border-primary-300 hover:shadow-sm transition-all ${errors.consent && item.req ? 'border-error-500 ring-1 ring-error-500' : 'border-neutral-200'}`}>
                        <div className="relative flex items-center">
@@ -495,30 +499,30 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
               </div>
               <div>
                 <h3 className="text-3xl font-bold text-neutral-900">{t('setup.ready')}</h3>
-                <p className="text-neutral-500 mt-2">Ready to generate your protocol</p>
+                <p className="text-neutral-500 mt-2">{t('setup.ready.desc')}</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4 max-w-md mx-auto text-left">
                  <div className="bg-white/60 backdrop-blur p-5 rounded-2xl border border-white shadow-sm hover:border-primary-300 transition-colors cursor-pointer" onClick={() => jumpToStep('bio')}>
                     <div className="flex justify-between">
-                        <p className="text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">Metabolic Rate</p>
+                        <p className="text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">{t('setup.metabolic_rate')}</p>
                         <Edit2Icon />
                     </div>
                     <p className="text-2xl font-bold text-neutral-800">{liveMetrics.tdee} <span className="text-sm font-normal text-neutral-500">kcal</span></p>
                  </div>
                  <div className="bg-white/60 backdrop-blur p-5 rounded-2xl border border-white shadow-sm hover:border-primary-300 transition-colors cursor-pointer" onClick={() => jumpToStep('goals')}>
                     <div className="flex justify-between">
-                        <p className="text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">Primary Goal</p>
+                        <p className="text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">{t('setup.primary_goal')}</p>
                         <Edit2Icon />
                     </div>
-                    <p className="text-2xl font-bold text-primary-600 capitalize text-ellipsis overflow-hidden whitespace-nowrap">{profile.goals?.prioritizedGoals?.[0]?.type || profile.goals?.primary}</p>
+                    <p className="text-2xl font-bold text-primary-600 capitalize text-ellipsis overflow-hidden whitespace-nowrap">{t(`opt.${profile.goals?.prioritizedGoals?.[0]?.id}`) || profile.goals?.primary}</p>
                  </div>
               </div>
 
               <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
                  {profile.clinical?.medicalConditions?.map(c => <span key={c} className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold border border-red-100">{c}</span>)}
                  {profile.routine?.dietaryPreference && <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100" onClick={() => jumpToStep('diet')}>{profile.routine.dietaryPreference}</span>}
-                 <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold border border-neutral-200" onClick={() => jumpToStep('activity')}>{profile.lifestyle?.activityLevel}</span>
+                 <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold border border-neutral-200" onClick={() => jumpToStep('activity')}>{t(`opt.${profile.lifestyle?.activityLevel?.toLowerCase().split(' ')[0]}`) || profile.lifestyle?.activityLevel}</span>
               </div>
            </div>
         )}
@@ -530,7 +534,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                 onClick={() => { vibrate(); prevStep(); }}
                 className="flex items-center gap-2 text-neutral-400 hover:text-neutral-600 font-medium transition-colors px-4 py-2 rounded-lg hover:bg-neutral-100/50"
              >
-               <ArrowLeft size={20} /> <span className="hidden sm:inline">{t('setup.back')}</span>
+               <ArrowLeft size={20} /> <span className="hidden sm:inline">{t('common.back')}</span>
              </button>
            ) : <div/>}
 
@@ -538,7 +542,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
               {/* Skip button for optional steps */}
               {['allergy', 'activity', 'chrono'].includes(currentStepId) && (
                   <button onClick={() => { vibrate(); skipStep(); }} className="text-neutral-400 hover:text-primary-500 font-medium text-sm transition-colors">
-                      Skip
+                      {t('common.skip')}
                   </button>
               )}
 
@@ -549,7 +553,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                 className="shadow-xl shadow-primary-500/20"
                 icon={currentStepId === 'review' ? <Sparkles size={20}/> : <ChevronRight size={20}/>}
               >
-                {currentStepId === 'review' ? t('setup.generate') : t('setup.next')}
+                {currentStepId === 'review' ? t('common.generate') : t('common.next')}
               </NutriButton>
            </div>
         </div>

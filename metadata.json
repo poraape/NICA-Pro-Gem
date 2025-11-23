@@ -1,0 +1,5 @@
+{
+  "name": "NICA-Pro",
+  "description": "A professional Intelligent Nutrition Lab application transforming free-text meal logs into clinical metrics, personalized plans, and continuous coaching using Gemini AI.",
+  "requestFramePermissions": []
+}

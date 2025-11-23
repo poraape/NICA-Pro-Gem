@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { WeeklyPlan, MealItem } from '../types';
-import { analyzeMealText } from '../services/geminiService';
-import { NutriButton } from './Button';
-import { NutriInput } from './NutriInput';
-import { ChevronDown, ChevronUp, Edit2, Camera, Mic, X, Sparkles, RefreshCw } from 'lucide-react';
+import { SmartMealInput } from './SmartMealInput';
+import { ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface WeeklyPlanViewProps {
@@ -12,59 +10,22 @@ interface WeeklyPlanViewProps {
 }
 
 export const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ plan, onUpdatePlan }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [expandedDay, setExpandedDay] = useState<string>(plan.days[0].day);
-  const [editingMeal, setEditingMeal] = useState<{ dayIndex: number; mealIndex: number; meal: MealItem } | null>(null);
-  
-  // Edit State
-  const [editMode, setEditMode] = useState<'ai' | 'manual'>('ai');
-  const [editText, setEditText] = useState('');
-  const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [manualValues, setManualValues] = useState<{name: string, cals: number, p: number, c: number, f: number}>({
-    name: '', cals: 0, p: 0, c: 0, f: 0
-  });
+  const [editingMealContext, setEditingMealContext] = useState<{ dayIndex: number; mealIndex: number; meal: MealItem } | null>(null);
 
   const handleEditClick = (dayIndex: number, mealIndex: number, meal: MealItem) => {
-    setEditingMeal({ dayIndex, mealIndex, meal });
-    setEditText(`${meal.name} ${meal.description || ''}`);
-    setManualValues({
-        name: meal.name,
-        cals: meal.calories,
-        p: meal.macros.protein,
-        c: meal.macros.carbs,
-        f: meal.macros.fats
-    });
+    setEditingMealContext({ dayIndex, mealIndex, meal });
   };
 
-  const handleAISubmit = async () => {
-    if (!editText.trim()) return;
-    setIsProcessingAI(true);
-    const result = await analyzeMealText(editText, language);
-    if (result) {
-        setManualValues({
-            name: result.name,
-            cals: result.calories,
-            p: result.macros.protein,
-            c: result.macros.carbs,
-            f: result.macros.fats
-        });
-        setEditMode('manual'); // Switch to review
-    }
-    setIsProcessingAI(false);
-  };
-
-  const saveChanges = () => {
-    if (!editingMeal) return;
+  const handleSaveEdit = (updatedMeal: MealItem) => {
+    if (!editingMealContext) return;
     
     const newPlan = { ...plan };
-    const day = newPlan.days[editingMeal.dayIndex];
-    const meal = day.meals[editingMeal.mealIndex];
-
-    // Update Meal
-    meal.name = manualValues.name;
-    meal.calories = manualValues.cals;
-    meal.macros = { protein: manualValues.p, carbs: manualValues.c, fats: manualValues.f };
-    meal.isEdited = true;
+    const day = newPlan.days[editingMealContext.dayIndex];
+    
+    // Update the meal in the plan
+    day.meals[editingMealContext.mealIndex] = updatedMeal;
 
     // Recalculate Day Totals
     day.dailyCalories = day.meals.reduce((sum, m) => sum + m.calories, 0);
@@ -76,19 +37,19 @@ export const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ plan, onUpdatePl
 
     // Recalculate Week Averages
     newPlan.averageCalories = Math.round(newPlan.days.reduce((sum, d) => sum + d.dailyCalories, 0) / 7);
-    newPlan.averageMacros = newPlan.days.reduce((acc, d) => ({
+    const totalMacros = newPlan.days.reduce((acc, d) => ({
         protein: acc.protein + d.dailyMacros.protein,
         carbs: acc.carbs + d.dailyMacros.carbs,
         fats: acc.fats + d.dailyMacros.fats
     }), { protein: 0, carbs: 0, fats: 0 });
+    
     newPlan.averageMacros = {
-        protein: Math.round(newPlan.averageMacros.protein / 7),
-        carbs: Math.round(newPlan.averageMacros.carbs / 7),
-        fats: Math.round(newPlan.averageMacros.fats / 7)
+        protein: Math.round(totalMacros.protein / 7),
+        carbs: Math.round(totalMacros.carbs / 7),
+        fats: Math.round(totalMacros.fats / 7)
     };
 
     onUpdatePlan(newPlan);
-    setEditingMeal(null);
   };
 
   return (
@@ -172,73 +133,12 @@ export const WeeklyPlanView: React.FC<WeeklyPlanViewProps> = ({ plan, onUpdatePl
         })}
       </div>
 
-      {/* Edit Modal / Slide-over */}
-      {editingMeal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
-          <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm pointer-events-auto" onClick={() => setEditingMeal(null)} />
-          
-          <div className="bg-white w-full sm:max-w-md p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl z-50 pointer-events-auto animate-slide-up max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-neutral-900">{t('plan.edit')}</h3>
-              <button onClick={() => setEditingMeal(null)} className="p-2 rounded-full hover:bg-neutral-100"><X size={20} /></button>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex bg-neutral-100 p-1 rounded-xl mb-6">
-              <button 
-                className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${editMode === 'ai' ? 'bg-white shadow-sm text-primary-600' : 'text-neutral-500'}`}
-                onClick={() => setEditMode('ai')}
-              >
-                {t('plan.ai_assistant')}
-              </button>
-              <button 
-                 className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${editMode === 'manual' ? 'bg-white shadow-sm text-primary-600' : 'text-neutral-500'}`}
-                 onClick={() => setEditMode('manual')}
-              >
-                {t('plan.manual')}
-              </button>
-            </div>
-
-            {editMode === 'ai' ? (
-               <div className="space-y-4">
-                  <NutriInput 
-                    label={t('plan.edit.placeholder')}
-                    multiline
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    helperText={t('plan.edit.helper')}
-                  />
-                  <div className="flex gap-2 justify-center pb-4 text-neutral-400">
-                     <button className="p-3 rounded-full bg-neutral-50 hover:bg-neutral-100 border border-neutral-200"><Camera size={20} /></button>
-                     <button className="p-3 rounded-full bg-neutral-50 hover:bg-neutral-100 border border-neutral-200"><Mic size={20} /></button>
-                  </div>
-                  <NutriButton 
-                    fullWidth 
-                    onClick={handleAISubmit} 
-                    isLoading={isProcessingAI}
-                    icon={<Sparkles size={18} />}
-                  >
-                    {t('plan.analyze')}
-                  </NutriButton>
-               </div>
-            ) : (
-                <div className="space-y-4">
-                   <NutriInput label={t('plan.manual.name')} value={manualValues.name} onChange={(e) => setManualValues({...manualValues, name: e.target.value})} />
-                   <div className="grid grid-cols-2 gap-4">
-                      <NutriInput label={t('plan.manual.cals')} type="number" value={manualValues.cals} onChange={(e) => setManualValues({...manualValues, cals: Number(e.target.value)})} />
-                      <div className="col-span-1" />
-                   </div>
-                   <div className="grid grid-cols-3 gap-3">
-                      <NutriInput label={t('plan.manual.protein')} type="number" value={manualValues.p} onChange={(e) => setManualValues({...manualValues, p: Number(e.target.value)})} />
-                      <NutriInput label={t('plan.manual.carbs')} type="number" value={manualValues.c} onChange={(e) => setManualValues({...manualValues, c: Number(e.target.value)})} />
-                      <NutriInput label={t('plan.manual.fats')} type="number" value={manualValues.f} onChange={(e) => setManualValues({...manualValues, f: Number(e.target.value)})} />
-                   </div>
-                   <NutriButton fullWidth onClick={saveChanges} icon={<RefreshCw size={18} />}>{t('plan.save')}</NutriButton>
-                </div>
-            )}
-          </div>
-        </div>
-      )}
+      <SmartMealInput 
+        isOpen={!!editingMealContext}
+        onClose={() => setEditingMealContext(null)}
+        onSave={handleSaveEdit}
+        initialMeal={editingMealContext?.meal}
+      />
     </div>
   );
 };

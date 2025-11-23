@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
-import { UserProfile, Gender, ActivityLevel, OnboardingMode, Biometrics, ClinicalData, LifestyleData, RoutineData, GoalsData, UserConsent } from '../types';
+import { UserProfile, Gender, ActivityLevel, OnboardingMode, Biometrics, GoalItem, RoutineData } from '../types';
 import { NutriInput } from './NutriInput';
 import { NutriSelect } from './NutriSelect';
 import { NutriButton } from './Button';
 import { 
-  User, Ruler, Weight, Target, ChevronRight, Sparkles, Brain, Clock, Moon, Leaf, 
-  Stethoscope, AlarmClock, Zap, CheckCircle2, ArrowLeft, ShieldCheck, Activity,
-  Lock, Utensils, HeartPulse, Wine
+  User, Ruler, Weight, Target, ChevronRight, Sparkles, Clock, 
+  Stethoscope, Activity, Lock, Utensils, CheckCircle2, ArrowLeft, 
+  Zap, Heart, Pill, Moon, AlertCircle, GripVertical, ChevronUp, ChevronDown,
+  AlertTriangle, Watch, Calendar
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -17,22 +17,28 @@ interface ProfileSetupProps {
   isEditing?: boolean;
 }
 
+// ------------------- STEPS CONFIGURATION -------------------
+// 10 Modules as requested in PROMPT 1
 const STEPS_COMPLETE = [
-  { id: 'mode', icon: Zap },
-  { id: 'bio', icon: User },      // A. Antropometria
-  { id: 'clinical', icon: Stethoscope }, // E. Saúde
-  { id: 'lifestyle', icon: Activity },   // D, F, G, J. Rotina/Sono/Social
-  { id: 'diet', icon: Utensils },        // B. Preferências
-  { id: 'goals', icon: Target },         // C. Objetivos
-  { id: 'privacy', icon: Lock },         // H, I, M. Privacidade
-  { id: 'review', icon: CheckCircle2 }
+  { id: 'mode', icon: Zap, label: 'Intro' },
+  { id: 'bio', icon: User, label: 'Bio' },         // M1: Antropometria
+  { id: 'goals', icon: Target, label: 'Goals' },    // M2: Objetivos
+  { id: 'diet', icon: Utensils, label: 'Diet' },    // M3: Preferências
+  { id: 'routine', icon: Clock, label: 'Routine' }, // M4: Rotina
+  { id: 'allergy', icon: AlertTriangle, label: 'Allergy' }, // M5: Alergias/Restrições
+  { id: 'clinical', icon: Stethoscope, label: 'Health' }, // M6: Clínico
+  { id: 'activity', icon: Activity, label: 'Move' }, // M7: Atividade
+  { id: 'chrono', icon: Moon, label: 'Sleep' },      // M8: Sono/Crononutrição
+  { id: 'privacy', icon: Lock, label: 'Consent' },   // M9: Consentimento
+  { id: 'review', icon: CheckCircle2, label: 'Review' } // M10: Revisão
 ];
 
 const STEPS_EXPRESS = [
-  { id: 'mode', icon: Zap },
-  { id: 'bio', icon: User },
-  { id: 'goals', icon: Target },
-  { id: 'review', icon: CheckCircle2 }
+  { id: 'mode', icon: Zap, label: 'Intro' },
+  { id: 'bio', icon: User, label: 'Bio' },
+  { id: 'goals', icon: Target, label: 'Goals' },
+  { id: 'privacy', icon: Lock, label: 'Consent' },
+  { id: 'review', icon: CheckCircle2, label: 'Review' }
 ];
 
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave, isEditing = false }) => {
@@ -40,7 +46,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
   const [stepIndex, setStepIndex] = useState(isEditing ? 1 : 0);
   const [mode, setMode] = useState<OnboardingMode>('complete');
   
-  // Initialize Complex State with Defaults
+  // ------------------- STATE -------------------
   const [profile, setProfile] = useState<Partial<UserProfile>>({
     onboardingMode: 'complete',
     language: language,
@@ -49,34 +55,40 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
     clinical: { medicalConditions: [], medications: [] },
     lifestyle: { 
       activityLevel: ActivityLevel.MODERATE, exerciseFrequency: 3, exerciseTypes: [], 
-      sleepQuality: 'average', stressLevel: 'moderate', smoking: false, alcoholIntake: 'Socially', caffeineIntake: 'Moderate' 
+      sleepQuality: 'average', stressLevel: 'moderate', smoking: false, alcoholIntake: 'Socially', caffeineIntake: 'Moderate',
+      sleepDuration: 7, bedTime: '23:00', wakeTime: '07:00'
     },
     routine: { 
       dietaryPreference: 'omnivore', mealsPerDay: 3, preferredMealTimes: '08:00, 13:00, 20:00', 
       cookingTime: 'medium', allergies: [], intolerances: [], dislikes: [], favorites: [], culturalRestrictions: [], socialContext: 'Family' 
     },
-    goals: { primary: 'loss', secondary: [] },
+    goals: { primary: 'loss', secondary: [], prioritizedGoals: [
+        { id: 'loss', type: 'Weight Loss', priority: 1 },
+        { id: 'energy', type: 'Daily Energy', priority: 2 },
+        { id: 'health', type: 'Long-term Health', priority: 3 }
+    ] },
     consent: { dataProcessing: true, analytics: true, camera: true, notifications: true },
     ...initialData
   });
 
-  // Local state for comma-separated inputs
+  // Local helper inputs
   const [inputs, setInputs] = useState({
     allergies: initialData?.routine?.allergies?.join(', ') || '',
     meds: initialData?.clinical?.medications?.join(', ') || '',
     conditions: initialData?.clinical?.medicalConditions?.join(', ') || '',
     dislikes: initialData?.routine?.dislikes?.join(', ') || '',
     favorites: initialData?.routine?.favorites?.join(', ') || '',
-    secondaryGoals: initialData?.goals?.secondary?.join(', ') || '',
   });
 
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [liveMetrics, setLiveMetrics] = useState({ bmr: 0, tdee: 0 });
 
   const currentSteps = mode === 'express' ? STEPS_EXPRESS : STEPS_COMPLETE;
-  const currentStepId = currentSteps[stepIndex].id;
+  const currentStepId = currentSteps[stepIndex]?.id || 'mode';
 
-  // Calculators
+  // ------------------- EFFECTS -------------------
+  // BMR/TDEE Calculator
   useEffect(() => {
     if (profile.biometrics && profile.lifestyle) {
       const { weight, height, age, gender } = profile.biometrics;
@@ -99,41 +111,97 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
     }
   }, [profile.biometrics, profile.lifestyle]);
 
-  // Handlers
-  const handleBioChange = (field: keyof Biometrics, val: any) => {
-    setProfile(prev => ({ ...prev, biometrics: { ...prev.biometrics!, [field]: val } }));
+  const vibrate = (pattern: number | number[] = 5) => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(pattern);
+    }
   };
 
-  const handleLifestyleChange = (field: keyof LifestyleData, val: any) => {
-    setProfile(prev => ({ ...prev, lifestyle: { ...prev.lifestyle!, [field]: val } }));
+  // ------------------- HANDLERS -------------------
+  const handleBioChange = (field: keyof Biometrics, val: any) => {
+    setProfile(prev => ({ ...prev, biometrics: { ...prev.biometrics!, [field]: val } }));
+    if (errors[field]) setErrors(prev => { const n = {...prev}; delete n[field]; return n; });
+  };
+
+  const handleGoalReorder = (index: number, direction: 'up' | 'down') => {
+    const goals = [...(profile.goals?.prioritizedGoals || [])];
+    if (direction === 'up' && index > 0) {
+      [goals[index], goals[index - 1]] = [goals[index - 1], goals[index]];
+    } else if (direction === 'down' && index < goals.length - 1) {
+      [goals[index], goals[index + 1]] = [goals[index + 1], goals[index]];
+    }
+    goals.forEach((g, i) => g.priority = i + 1);
+    setProfile(prev => ({...prev, goals: {...prev.goals!, prioritizedGoals: goals}}));
+    vibrate(10);
   };
 
   const handleRoutineChange = (field: keyof RoutineData, val: any) => {
     setProfile(prev => ({ ...prev, routine: { ...prev.routine!, [field]: val } }));
   };
-  
-  const handleGoalsChange = (field: keyof GoalsData, val: any) => {
-    setProfile(prev => ({ ...prev, goals: { ...prev.goals!, [field]: val } }));
-  };
 
   const handleTextListChange = (key: keyof typeof inputs, val: string) => {
     setInputs(prev => ({ ...prev, [key]: val }));
-    // Update profile based on key
-    if (key === 'allergies') handleRoutineChange('allergies', val.split(',').map(s => s.trim()).filter(Boolean));
-    if (key === 'dislikes') handleRoutineChange('dislikes', val.split(',').map(s => s.trim()).filter(Boolean));
-    if (key === 'favorites') handleRoutineChange('favorites', val.split(',').map(s => s.trim()).filter(Boolean));
-    if (key === 'meds') setProfile(p => ({...p, clinical: {...p.clinical!, medications: val.split(',').map(s => s.trim()).filter(Boolean)}}));
-    if (key === 'conditions') setProfile(p => ({...p, clinical: {...p.clinical!, medicalConditions: val.split(',').map(s => s.trim()).filter(Boolean)}}));
-    if (key === 'secondaryGoals') setProfile(p => ({...p, goals: {...p.goals!, secondary: val.split(',').map(s => s.trim()).filter(Boolean)}}));
+    const arrayVal = val.split(',').map(s => s.trim()).filter(Boolean);
+    
+    if (key === 'allergies') handleRoutineChange('allergies', arrayVal);
+    if (key === 'dislikes') handleRoutineChange('dislikes', arrayVal);
+    if (key === 'favorites') handleRoutineChange('favorites', arrayVal);
+    if (key === 'meds') setProfile(p => ({...p, clinical: {...p.clinical!, medications: arrayVal}}));
+    if (key === 'conditions') setProfile(p => ({...p, clinical: {...p.clinical!, medicalConditions: arrayVal}}));
+  };
+
+  const validateStep = () => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    if (currentStepId === 'bio') {
+      if (!profile.name) newErrors.name = "Required";
+      if (!profile.biometrics?.age) newErrors.age = "Required";
+      if (!profile.biometrics?.height) newErrors.height = "Required";
+      if (!profile.biometrics?.weight) newErrors.weight = "Required";
+    }
+    
+    if (currentStepId === 'privacy') {
+        if (!profile.consent?.dataProcessing) newErrors.consent = "Required";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      vibrate([50, 50, 50]); // Error pattern
+      isValid = false;
+    } else {
+      setErrors({});
+      vibrate(15); // Success pattern
+    }
+    return isValid;
   };
 
   const nextStep = () => {
-    if (stepIndex < currentSteps.length - 1) setStepIndex(prev => prev + 1);
-    else finishSetup();
+    if (!validateStep()) return;
+    if (stepIndex < currentSteps.length - 1) {
+      setStepIndex(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      finishSetup();
+    }
   };
 
   const prevStep = () => {
-    if (stepIndex > 0) setStepIndex(prev => prev - 1);
+    if (stepIndex > 0) {
+      setStepIndex(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  
+  const skipStep = () => {
+      // Logic to allow skipping non-essential steps
+      setStepIndex(prev => Math.min(prev + 1, currentSteps.length - 1));
+      vibrate(5);
+  };
+
+  const jumpToStep = (id: string) => {
+      const idx = currentSteps.findIndex(s => s.id === id);
+      if (idx !== -1) setStepIndex(idx);
   };
 
   const finishSetup = () => {
@@ -158,230 +226,342 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
     }, 800);
   };
 
-  // Render Logic
+  const renderHeader = (title: string, sub: string, icon: React.ReactNode) => (
+    <div className="text-center mb-8 animate-fade-in">
+       <div className="w-16 h-16 bg-primary-50 rounded-2xl mx-auto flex items-center justify-center text-primary-600 mb-4 shadow-glow">
+          {icon}
+       </div>
+       <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">{title}</h2>
+       <p className="text-neutral-500 mt-2 text-lg">{sub}</p>
+    </div>
+  );
+
   return (
-    <div className={`min-h-[80vh] flex flex-col items-center justify-center ${!isEditing ? 'py-12' : ''}`}>
+    <div className={`min-h-[90vh] flex flex-col items-center justify-center ${!isEditing ? 'py-12' : ''}`}>
       
-      {/* Progress */}
-      <div className="w-full max-w-3xl mb-8">
-        <div className="flex justify-between mb-2">
+      {/* PROGRESS BAR */}
+      <div className="w-full max-w-2xl mb-10 px-6">
+        <div className="flex justify-between mb-3 overflow-x-auto pb-2 no-scrollbar">
            {currentSteps.map((s, idx) => (
-             <div key={s.id} className={`flex flex-col items-center ${idx <= stepIndex ? 'text-primary-600' : 'text-neutral-300'}`}>
-               <s.icon size={20} />
+             <div key={s.id} className={`flex flex-col items-center min-w-[30px] transition-colors duration-500 ${idx <= stepIndex ? 'text-primary-600' : 'text-neutral-300'}`}>
+               <div className={`w-2.5 h-2.5 rounded-full ${idx <= stepIndex ? 'bg-primary-500 scale-125' : 'bg-neutral-200'} transition-all duration-300`}/>
              </div>
            ))}
         </div>
-        <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden shadow-inner">
            <div 
-             className="h-full bg-primary-500 transition-all duration-500 ease-out"
+             className="h-full bg-primary-500 transition-all duration-700 ease-out shadow-[0_0_10px_rgba(32,129,146,0.5)]"
              style={{ width: `${((stepIndex + 1) / currentSteps.length) * 100}%` }}
            />
         </div>
       </div>
 
-      <div className={`w-full max-w-3xl bg-white/80 backdrop-blur-xl rounded-3xl shadow-glass border border-white/60 p-8 md:p-10 transition-all duration-500 animate-slide-up`}>
+      {/* GLASS CARD CONTAINER */}
+      <div className={`w-full max-w-3xl glass-panel rounded-[32px] shadow-glass p-6 md:p-12 transition-all duration-500 animate-slide-up relative overflow-hidden bg-white/70`}>
         
-        {/* STEP: MODE SELECTION */}
+        {/* Background Decorative Blob */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 pointer-events-none"></div>
+
+        {/* --- M1: MODE --- */}
         {currentStepId === 'mode' && (
-          <div className="space-y-8 text-center">
-            <h2 className="text-3xl font-bold text-neutral-900">{t('setup.title')}</h2>
-            <p className="text-neutral-500">{t('setup.subtitle')}</p>
+          <div className="space-y-8 text-center relative z-10">
+            {renderHeader(t('setup.title'), t('setup.subtitle'), <Sparkles size={32}/>)}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <button onClick={() => { setMode('express'); setStepIndex(1); }} className="p-6 border-2 border-neutral-100 rounded-2xl hover:border-primary-500 hover:bg-primary-50/20 text-left transition-all">
-                  <div className="flex items-center gap-3 mb-4">
-                     <div className="bg-primary-100 p-3 rounded-xl text-primary-600"><Zap size={24} /></div>
-                     <h3 className="font-bold text-lg">{t('setup.express')}</h3>
-                  </div>
-                  <p className="text-sm text-neutral-500">{t('setup.express.desc')}</p>
+               <button onClick={() => { setMode('express'); setStepIndex(1); vibrate(); }} className="group p-8 border-2 border-white bg-white/50 backdrop-blur rounded-3xl hover:border-primary-400 hover:shadow-glow text-left transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="bg-primary-100 w-12 h-12 flex items-center justify-center rounded-xl text-primary-600 mb-4 group-hover:scale-110 transition-transform"><Zap size={24} /></div>
+                  <h3 className="font-bold text-xl text-neutral-900 mb-2">{t('setup.express')}</h3>
+                  <p className="text-sm text-neutral-500 leading-relaxed">{t('setup.express.desc')}</p>
                </button>
-               <button onClick={() => { setMode('complete'); setStepIndex(1); }} className="p-6 border-2 border-primary-500 bg-primary-50/10 rounded-2xl shadow-lg shadow-primary-500/10 text-left relative overflow-hidden">
-                  <div className="flex items-center gap-3 mb-4">
-                     <div className="bg-primary-600 p-3 rounded-xl text-white"><CheckCircle2 size={24} /></div>
-                     <h3 className="font-bold text-lg">{t('setup.complete')}</h3>
-                  </div>
-                  <p className="text-sm text-neutral-700">{t('setup.complete.desc')}</p>
+               <button onClick={() => { setMode('complete'); setStepIndex(1); vibrate(); }} className="group p-8 border-2 border-primary-500 bg-primary-50/30 backdrop-blur rounded-3xl shadow-glow text-left relative overflow-hidden transition-all duration-300 transform hover:-translate-y-1">
+                  <div className="absolute top-0 right-0 bg-primary-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl">RECOMMENDED</div>
+                  <div className="bg-primary-600 w-12 h-12 flex items-center justify-center rounded-xl text-white mb-4 group-hover:scale-110 transition-transform"><CheckCircle2 size={24} /></div>
+                  <h3 className="font-bold text-xl text-neutral-900 mb-2">{t('setup.complete')}</h3>
+                  <p className="text-sm text-neutral-700 leading-relaxed">{t('setup.complete.desc')}</p>
                </button>
             </div>
           </div>
         )}
 
-        {/* STEP: BIOMETRICS (A) */}
+        {/* --- M1: BIO --- */}
         {currentStepId === 'bio' && (
-           <div className="space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><User className="text-primary-500" /> {t('setup.bio')}</h3>
-              <NutriInput label={t('label.name')} value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} />
-              <div className="grid grid-cols-2 gap-4">
-                 <NutriInput label={t('label.age')} type="number" value={profile.biometrics?.age} onChange={e => handleBioChange('age', Number(e.target.value))} />
-                 <NutriSelect label={t('label.gender')} options={[{value: 'Male', label: t('opt.male')}, {value: 'Female', label: t('opt.female')}]} value={profile.biometrics?.gender} onChange={e => handleBioChange('gender', e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <NutriInput label={t('label.height')} type="number" startIcon={<Ruler size={16}/>} value={profile.biometrics?.height} onChange={e => handleBioChange('height', Number(e.target.value))} />
-                 <NutriInput label={t('label.weight')} type="number" startIcon={<Weight size={16}/>} value={profile.biometrics?.weight} onChange={e => handleBioChange('weight', Number(e.target.value))} />
-              </div>
-              {mode === 'complete' && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-neutral-100">
-                   <NutriInput label="Body Fat % (Optional)" type="number" value={profile.biometrics?.bodyFatPercentage || ''} onChange={e => handleBioChange('bodyFatPercentage', Number(e.target.value))} tooltip="Helps calculate lean mass" />
-                   <NutriInput label="Waist (cm) (Optional)" type="number" value={profile.biometrics?.waistCircumference || ''} onChange={e => handleBioChange('waistCircumference', Number(e.target.value))} tooltip="Risk indicator" />
+           <div className="space-y-8 relative z-10 animate-fade-in">
+              {renderHeader(t('setup.bio'), t('setup.bio.desc'), <User size={32}/>)}
+              <div className="space-y-6">
+                <NutriInput label={t('label.name')} value={profile.name} onChange={e => {setProfile({...profile, name: e.target.value}); if(errors.name) setErrors({...errors, name: ''})}} error={errors.name} autoFocus />
+                <div className="grid grid-cols-2 gap-6">
+                   <NutriInput label={t('label.age')} type="number" value={profile.biometrics?.age} onChange={e => handleBioChange('age', Number(e.target.value))} error={errors.age} />
+                   <NutriSelect label={t('label.gender')} options={[{value: 'Male', label: t('opt.male')}, {value: 'Female', label: t('opt.female')}]} value={profile.biometrics?.gender} onChange={e => handleBioChange('gender', e.target.value)} />
                 </div>
-              )}
-           </div>
-        )}
-
-        {/* STEP: CLINICAL (E) */}
-        {currentStepId === 'clinical' && (
-           <div className="space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><Stethoscope className="text-primary-500" /> Clinical History</h3>
-              <NutriInput label="Medical Conditions" value={inputs.conditions} onChange={e => handleTextListChange('conditions', e.target.value)} helperText="e.g. Diabetes, Hypertension" />
-              <NutriInput label="Medications" value={inputs.meds} onChange={e => handleTextListChange('meds', e.target.value)} helperText="Name and dosage" />
-              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3 text-sm text-amber-800">
-                 <ShieldCheck className="shrink-0" />
-                 <p>Your health data is encrypted and used solely to prevent contraindications in your meal plan.</p>
+                <div className="grid grid-cols-2 gap-6">
+                   <NutriInput label={t('label.height')} type="number" startIcon={<Ruler size={18}/>} value={profile.biometrics?.height} onChange={e => handleBioChange('height', Number(e.target.value))} error={errors.height} />
+                   <NutriInput label={t('label.weight')} type="number" startIcon={<Weight size={18}/>} value={profile.biometrics?.weight} onChange={e => handleBioChange('weight', Number(e.target.value))} error={errors.weight} />
+                </div>
+                {mode === 'complete' && (
+                  <div className="grid grid-cols-2 gap-6 pt-4 border-t border-neutral-200/50">
+                     <NutriInput label="Body Fat %" type="number" value={profile.biometrics?.bodyFatPercentage || ''} onChange={e => handleBioChange('bodyFatPercentage', Number(e.target.value))} tooltip="Optional: Improves TDEE accuracy" />
+                     <NutriInput label="Waist (cm)" type="number" value={profile.biometrics?.waistCircumference || ''} onChange={e => handleBioChange('waistCircumference', Number(e.target.value))} tooltip="Optional: Clinical risk indicator" />
+                  </div>
+                )}
               </div>
            </div>
         )}
 
-        {/* STEP: LIFESTYLE (D, F, G, J) */}
-        {currentStepId === 'lifestyle' && (
-           <div className="space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><Activity className="text-primary-500" /> Lifestyle & Routine</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <NutriSelect label={t('label.activity')} options={Object.values(ActivityLevel).map(v => ({value: v, label: v}))} value={profile.lifestyle?.activityLevel} onChange={e => handleLifestyleChange('activityLevel', e.target.value)} />
-                <NutriSelect label="Social Context" options={[{value: 'Alone', label: 'Mostly Alone'}, {value: 'Family', label: 'With Family'}, {value: 'Social', label: 'Frequent Events'}]} value={profile.routine?.socialContext} onChange={e => handleRoutineChange('socialContext', e.target.value)} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                 <NutriSelect label={t('label.sleep')} options={['poor', 'average', 'good', 'excellent'].map(v => ({value: v, label: v}))} value={profile.lifestyle?.sleepQuality} onChange={e => handleLifestyleChange('sleepQuality', e.target.value)} />
-                 <NutriSelect label={t('label.stress')} options={['low', 'moderate', 'high'].map(v => ({value: v, label: v}))} value={profile.lifestyle?.stressLevel} onChange={e => handleLifestyleChange('stressLevel', e.target.value)} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                 <NutriSelect label="Alcohol" options={['None', 'Socially', 'Weekly', 'Daily'].map(v => ({value: v, label: v}))} value={profile.lifestyle?.alcoholIntake} onChange={e => handleLifestyleChange('alcoholIntake', e.target.value)} />
-                 <NutriSelect label="Caffeine" options={['None', 'Low', 'Moderate', 'High'].map(v => ({value: v, label: v}))} value={profile.lifestyle?.caffeineIntake} onChange={e => handleLifestyleChange('caffeineIntake', e.target.value)} />
-                 <div className="flex items-center justify-center border border-neutral-200 rounded-xl bg-white">
-                    <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
-                       <input type="checkbox" checked={profile.lifestyle?.smoking} onChange={e => handleLifestyleChange('smoking', e.target.checked)} className="rounded text-primary-500 focus:ring-primary-500" />
-                       Smoker?
-                    </label>
-                 </div>
-              </div>
-           </div>
-        )}
-
-        {/* STEP: DIET (B) */}
-        {currentStepId === 'diet' && (
-           <div className="space-y-6">
-               <h3 className="text-xl font-bold flex items-center gap-2"><Utensils className="text-primary-500" /> Dietary Preferences</h3>
-               <div className="grid grid-cols-2 gap-4">
-                  <NutriSelect label={t('label.diet')} options={['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'mediterranean'].map(v => ({value: v, label: v}))} value={profile.routine?.dietaryPreference} onChange={e => handleRoutineChange('dietaryPreference', e.target.value)} />
-                  <NutriSelect label={t('label.cooking')} options={['low', 'medium', 'high'].map(v => ({value: v, label: v}))} value={profile.routine?.cookingTime} onChange={e => handleRoutineChange('cookingTime', e.target.value)} />
-               </div>
-               
-               <div className="space-y-3">
-                 <p className="text-sm font-semibold text-neutral-700">Meal Frequency & Timing</p>
-                 <div className="flex gap-4">
-                    <div className="flex gap-1">
-                      {[3, 4, 5, 6].map(n => (
-                        <button key={n} type="button" onClick={() => handleRoutineChange('mealsPerDay', n)} className={`w-10 h-10 rounded-lg border ${profile.routine?.mealsPerDay === n ? 'bg-neutral-800 text-white border-neutral-800' : 'bg-white text-neutral-600'}`}>{n}</button>
-                      ))}
-                    </div>
-                    <NutriInput label="" placeholder="Times (e.g. 08:00, 12:00)" value={profile.routine?.preferredMealTimes} onChange={e => handleRoutineChange('preferredMealTimes', e.target.value)} className="flex-1" />
-                 </div>
-               </div>
-
-               <NutriInput label={t('label.allergies')} value={inputs.allergies} onChange={e => handleTextListChange('allergies', e.target.value)} multiline placeholder="Peanuts, Shellfish..." />
-               <NutriInput label="Dislikes / Restrictions" value={inputs.dislikes} onChange={e => handleTextListChange('dislikes', e.target.value)} placeholder="Okra, Liver, Pork (Halal)..." />
-           </div>
-        )}
-
-        {/* STEP: GOALS (C) */}
+        {/* --- M2: GOALS --- */}
         {currentStepId === 'goals' && (
-           <div className="space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><Target className="text-primary-500" /> Objectives</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {['loss', 'maintain', 'gain', 'longevity', 'performance'].map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => handleGoalsChange('primary', g)}
-                      className={`p-4 rounded-xl border-2 text-left capitalize ${profile.goals?.primary === g ? 'border-primary-500 bg-primary-50' : 'border-neutral-100'}`}
-                    >
-                      <span className="font-bold text-neutral-800">{g}</span>
-                    </button>
-                  ))}
+          <div className="space-y-8 relative z-10 animate-fade-in">
+             {renderHeader('Prioritize Objectives', 'Drag to reorder importance', <Target size={32}/>)}
+             <div className="space-y-3">
+                {profile.goals?.prioritizedGoals?.map((goal, idx) => (
+                  <div key={goal.id} className="flex items-center gap-4 p-4 bg-white border border-neutral-200 rounded-2xl shadow-sm transition-all hover:border-primary-300">
+                    <div className="flex flex-col gap-1 text-neutral-400">
+                       <button onClick={() => handleGoalReorder(idx, 'up')} disabled={idx === 0} className="hover:text-primary-500 disabled:opacity-30"><ChevronUp size={20}/></button>
+                       <button onClick={() => handleGoalReorder(idx, 'down')} disabled={idx === (profile.goals?.prioritizedGoals?.length || 0) - 1} className="hover:text-primary-500 disabled:opacity-30"><ChevronDown size={20}/></button>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm">
+                      {goal.priority}
+                    </div>
+                    <div className="flex-1 font-semibold text-neutral-800">{goal.type}</div>
+                    <GripVertical className="text-neutral-300 cursor-grab" />
+                  </div>
+                ))}
+             </div>
+             <div className="pt-4">
+               <NutriInput label="Core Motivation" value={profile.goals?.motivation || ''} onChange={e => setProfile(p => ({...p, goals: {...p.goals!, motivation: e.target.value}}))} placeholder="E.g. Wedding in 3 months" startIcon={<Heart size={18} className="text-primary-400"/>} />
+             </div>
+          </div>
+        )}
+
+        {/* --- M3: PREFERENCES (Diet) --- */}
+        {currentStepId === 'diet' && (
+          <div className="space-y-8 relative z-10 animate-fade-in">
+             {renderHeader(t('setup.routine'), 'Preferences & Lifestyle', <Utensils size={32}/>)}
+             <div className="grid grid-cols-2 gap-6">
+                <NutriSelect label={t('label.diet')} options={['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'mediterranean'].map(v => ({value: v, label: v}))} value={profile.routine?.dietaryPreference} onChange={e => handleRoutineChange('dietaryPreference', e.target.value)} />
+                <NutriSelect label={t('label.cooking')} options={['low', 'medium', 'high'].map(v => ({value: v, label: v}))} value={profile.routine?.cookingTime} onChange={e => handleRoutineChange('cookingTime', e.target.value)} />
+             </div>
+             <NutriInput label="Disliked Foods" value={inputs.dislikes} onChange={e => handleTextListChange('dislikes', e.target.value)} placeholder="E.g. Cilantro, Okra..." />
+          </div>
+        )}
+
+        {/* --- M4: ROUTINE --- */}
+        {currentStepId === 'routine' && (
+           <div className="space-y-8 relative z-10 animate-fade-in">
+              {renderHeader('Daily Rhythm', 'Meal timing and frequency', <Clock size={32}/>)}
+              <div className="bg-white/50 p-6 rounded-3xl border border-neutral-200">
+                 <div className="flex justify-between items-center mb-6">
+                    <span className="font-bold text-neutral-700">Meals per Day</span>
+                    <span className="text-2xl font-bold text-primary-600">{profile.routine?.mealsPerDay}</span>
+                 </div>
+                 <input 
+                   type="range" min="2" max="6" step="1"
+                   value={profile.routine?.mealsPerDay}
+                   onChange={e => handleRoutineChange('mealsPerDay', Number(e.target.value))}
+                   className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                 />
+                 <div className="flex justify-between text-xs text-neutral-400 mt-2 font-medium">
+                    <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                 </div>
               </div>
-              
-              <NutriInput label="Motivation" value={profile.goals?.motivation || ''} onChange={e => handleGoalsChange('motivation', e.target.value)} placeholder="Why now? e.g. Wedding in 3 months" />
-              <NutriInput label="Secondary Goals" value={inputs.secondaryGoals} onChange={e => handleTextListChange('secondaryGoals', e.target.value)} placeholder="Better sleep, Lower cholesterol..." />
+              <NutriInput label="Preferred Times" value={profile.routine?.preferredMealTimes} onChange={e => handleRoutineChange('preferredMealTimes', e.target.value)} helperText="Comma separated (e.g. 08:00, 12:00)" />
+              <NutriSelect label="Social Context" options={[{value: 'Alone', label: 'Mostly Alone'}, {value: 'Family', label: 'With Family'}, {value: 'Social', label: 'Frequent Events'}]} value={profile.routine?.socialContext} onChange={e => handleRoutineChange('socialContext', e.target.value)} />
            </div>
         )}
 
-        {/* STEP: PRIVACY (H, I, M) */}
+        {/* --- M5: ALLERGIES --- */}
+        {currentStepId === 'allergy' && (
+            <div className="space-y-8 relative z-10 animate-fade-in">
+                {renderHeader('Restrictions', 'Allergies & Intolerances', <AlertTriangle size={32}/>)}
+                <div className="space-y-4">
+                    <label className="text-sm font-medium text-neutral-600 ml-1">Common Allergens</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {['Gluten', 'Dairy', 'Nuts', 'Shellfish', 'Pork', 'Eggs'].map(item => {
+                        const isSelected = inputs.allergies.includes(item);
+                        return (
+                        <button 
+                            key={item}
+                            onClick={() => {
+                            const current = inputs.allergies.split(', ').filter(Boolean);
+                            const next = isSelected ? current.filter(i => i !== item) : [...current, item];
+                            handleTextListChange('allergies', next.join(', '));
+                            }}
+                            className={`p-3 rounded-xl border text-sm font-medium transition-all ${isSelected ? 'bg-primary-50 border-primary-500 text-primary-700' : 'bg-white border-neutral-200 text-neutral-600 hover:border-primary-300'}`}
+                        >
+                            {item}
+                        </button>
+                        )
+                    })}
+                    </div>
+                    <NutriInput label="Other Allergies" value={inputs.allergies} onChange={e => handleTextListChange('allergies', e.target.value)} placeholder="Type specific allergies..." />
+                </div>
+            </div>
+        )}
+
+        {/* --- M6: CLINICAL --- */}
+        {currentStepId === 'clinical' && (
+           <div className="space-y-8 relative z-10 animate-fade-in">
+              {renderHeader('Health Profile', 'Confidential medical context', <Stethoscope size={32}/>)}
+              <NutriInput label="Diagnosed Conditions" value={inputs.conditions} onChange={e => handleTextListChange('conditions', e.target.value)} startIcon={<Activity size={18}/>} placeholder="Diabetes, Hypertension, PCOS..." />
+              <NutriInput label="Medications & Supplements" value={inputs.meds} onChange={e => handleTextListChange('meds', e.target.value)} startIcon={<Pill size={18}/>} placeholder="Metformin 500mg, Whey Protein..." />
+              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3 text-sm text-amber-800">
+                 <Lock className="shrink-0" size={18} />
+                 <p className="leading-relaxed">Your health data is encrypted locally and only used to prevent contraindications in your meal plan generation.</p>
+              </div>
+           </div>
+        )}
+
+        {/* --- M7: ACTIVITY --- */}
+        {currentStepId === 'activity' && (
+           <div className="space-y-8 relative z-10 animate-fade-in">
+              {renderHeader('Movement', 'Activity expenditure estimation', <Activity size={32}/>)}
+              <NutriSelect label={t('label.activity')} options={Object.values(ActivityLevel).map(v => ({value: v, label: v}))} value={profile.lifestyle?.activityLevel} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, activityLevel: e.target.value as any}}))} />
+              <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
+                 <div className="flex items-center gap-3 mb-4">
+                    <div className="bg-primary-100 p-2 rounded-lg text-primary-600"><Zap size={20}/></div>
+                    <span className="font-bold text-neutral-800">Workouts / Week</span>
+                 </div>
+                 <div className="flex gap-2">
+                    {[0, 1, 2, 3, 4, 5, 6, 7].map(n => (
+                       <button key={n} onClick={() => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, exerciseFrequency: n}}))} className={`flex-1 py-3 rounded-xl font-bold transition-all ${profile.lifestyle?.exerciseFrequency === n ? 'bg-primary-500 text-white shadow-md scale-105' : 'bg-neutral-50 text-neutral-400 hover:bg-neutral-100'}`}>{n}</button>
+                    ))}
+                 </div>
+              </div>
+              <div className="flex items-center gap-3 text-neutral-500 text-sm p-4 bg-neutral-50 rounded-xl">
+                 <Watch size={20} />
+                 <span>Wearable import unavailable (Web Mode)</span>
+              </div>
+           </div>
+        )}
+
+        {/* --- M8: CHRONO --- */}
+        {currentStepId === 'chrono' && (
+           <div className="space-y-8 relative z-10 animate-fade-in">
+              {renderHeader('Sleep & Rhythm', 'Circadian Optimization', <Moon size={32}/>)}
+              <div className="grid grid-cols-2 gap-6">
+                 <NutriInput label="Bed Time" type="time" value={profile.lifestyle?.bedTime} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, bedTime: e.target.value}}))} />
+                 <NutriInput label="Wake Time" type="time" value={profile.lifestyle?.wakeTime} onChange={e => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, wakeTime: e.target.value}}))} />
+              </div>
+              <div className="p-6 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-4">
+                 <Moon className="text-indigo-500" size={24} />
+                 <div>
+                    <h4 className="font-bold text-indigo-900">Sleep Quality</h4>
+                    <p className="text-xs text-indigo-600 mb-2">Impacts cortisol & insulin sensitivity</p>
+                    <div className="flex gap-2 mt-2">
+                       {['poor', 'average', 'good', 'excellent'].map(q => (
+                          <button key={q} onClick={() => setProfile(p => ({...p, lifestyle: {...p.lifestyle!, sleepQuality: q as any}}))} className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition-colors ${profile.lifestyle?.sleepQuality === q ? 'bg-indigo-500 text-white' : 'bg-white text-indigo-300'}`}>{q}</button>
+                       ))}
+                    </div>
+                 </div>
+              </div>
+           </div>
+        )}
+
+        {/* --- M9: CONSENT --- */}
         {currentStepId === 'privacy' && (
-           <div className="space-y-6">
-              <h3 className="text-xl font-bold flex items-center gap-2"><Lock className="text-primary-500" /> Privacy & Consent</h3>
+           <div className="space-y-8 relative z-10 animate-fade-in">
+              {renderHeader('Data Consent', 'You own your data', <Lock size={32}/>)}
               <div className="space-y-4">
                  {[
-                   { k: 'dataProcessing', l: 'I consent to processing my health data for meal planning (GDPR/LGPD)' },
-                   { k: 'camera', l: 'Allow camera access for food logging (OCR)' },
-                   { k: 'analytics', l: 'Allow anonymous analytics to improve the AI' }
+                   { k: 'dataProcessing', l: 'Processing of health data for diet generation', req: true },
+                   { k: 'camera', l: 'Camera access for Meal Scanning (OCR)', req: false },
+                   { k: 'analytics', l: 'Anonymous usage analytics', req: false }
                  ].map((item) => (
-                    <label key={item.k} className="flex items-start gap-3 p-4 border border-neutral-100 rounded-xl cursor-pointer hover:bg-neutral-50">
-                       <input 
-                         type="checkbox" 
-                         checked={(profile.consent as any)[item.k]} 
-                         onChange={e => setProfile(p => ({...p, consent: {...p.consent!, [item.k]: e.target.checked}}))}
-                         className="mt-1 w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                       />
-                       <span className="text-sm text-neutral-700">{item.l}</span>
+                    <label key={item.k} className={`flex items-center gap-4 p-5 bg-white border rounded-2xl cursor-pointer hover:border-primary-300 hover:shadow-sm transition-all ${errors.consent && item.req ? 'border-error-500 ring-1 ring-error-500' : 'border-neutral-200'}`}>
+                       <div className="relative flex items-center">
+                          <input 
+                            type="checkbox" 
+                            checked={(profile.consent as any)[item.k]} 
+                            onChange={e => { vibrate(); setProfile(p => ({...p, consent: {...p.consent!, [item.k]: e.target.checked}})) }}
+                            className="peer h-6 w-6 cursor-pointer appearance-none rounded-md border border-neutral-300 transition-all checked:border-primary-500 checked:bg-primary-500"
+                          />
+                          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
+                             <CheckCircle2 size={16} />
+                          </div>
+                       </div>
+                       <div>
+                          <p className="font-bold text-neutral-800">{item.l}</p>
+                          {item.req && <span className="text-xs text-primary-500 font-semibold uppercase tracking-wider">Required</span>}
+                       </div>
                     </label>
                  ))}
               </div>
            </div>
         )}
 
-        {/* STEP: REVIEW */}
+        {/* --- M10: REVIEW --- */}
         {currentStepId === 'review' && (
-           <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-primary-50 rounded-full mx-auto flex items-center justify-center text-primary-600 animate-scale-in">
-                 <Sparkles size={40} />
+           <div className="text-center space-y-8 relative z-10 animate-fade-in">
+              <div className="w-24 h-24 bg-gradient-to-tr from-primary-400 to-primary-600 rounded-full mx-auto flex items-center justify-center text-white shadow-glow animate-scale-in">
+                 <Sparkles size={48} />
               </div>
-              <h3 className="text-2xl font-bold text-neutral-900">{t('setup.ready')}</h3>
+              <div>
+                <h3 className="text-3xl font-bold text-neutral-900">{t('setup.ready')}</h3>
+                <p className="text-neutral-500 mt-2">Ready to generate your protocol</p>
+              </div>
               
               <div className="grid grid-cols-2 gap-4 max-w-md mx-auto text-left">
-                 <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200">
-                    <p className="text-xs text-neutral-500 uppercase tracking-wider">TDEE</p>
-                    <p className="text-xl font-bold text-neutral-900">{liveMetrics.tdee} kcal</p>
+                 <div className="bg-white/60 backdrop-blur p-5 rounded-2xl border border-white shadow-sm hover:border-primary-300 transition-colors cursor-pointer" onClick={() => jumpToStep('bio')}>
+                    <div className="flex justify-between">
+                        <p className="text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">Metabolic Rate</p>
+                        <Edit2Icon />
+                    </div>
+                    <p className="text-2xl font-bold text-neutral-800">{liveMetrics.tdee} <span className="text-sm font-normal text-neutral-500">kcal</span></p>
                  </div>
-                 <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200">
-                    <p className="text-xs text-neutral-500 uppercase tracking-wider">Goal</p>
-                    <p className="text-xl font-bold text-primary-600 capitalize">{profile.goals?.primary}</p>
+                 <div className="bg-white/60 backdrop-blur p-5 rounded-2xl border border-white shadow-sm hover:border-primary-300 transition-colors cursor-pointer" onClick={() => jumpToStep('goals')}>
+                    <div className="flex justify-between">
+                        <p className="text-xs text-neutral-400 uppercase tracking-wider font-bold mb-1">Primary Goal</p>
+                        <Edit2Icon />
+                    </div>
+                    <p className="text-2xl font-bold text-primary-600 capitalize text-ellipsis overflow-hidden whitespace-nowrap">{profile.goals?.prioritizedGoals?.[0]?.type || profile.goals?.primary}</p>
                  </div>
               </div>
-              
-              <p className="text-neutral-500 text-sm max-w-sm mx-auto">
-                 We have collected {Object.keys(profile).length} data points to build your hyper-personalized protocol.
-              </p>
+
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
+                 {profile.clinical?.medicalConditions?.map(c => <span key={c} className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold border border-red-100">{c}</span>)}
+                 {profile.routine?.dietaryPreference && <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100" onClick={() => jumpToStep('diet')}>{profile.routine.dietaryPreference}</span>}
+                 <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold border border-neutral-200" onClick={() => jumpToStep('activity')}>{profile.lifestyle?.activityLevel}</span>
+              </div>
            </div>
         )}
 
-        {/* Navigation */}
-        <div className="pt-8 flex gap-4 mt-auto">
-           {stepIndex > 0 && (
-             <NutriButton variant="ghost" onClick={prevStep} icon={<ArrowLeft size={18} />}>Back</NutriButton>
-           )}
-           <NutriButton 
-             onClick={nextStep} 
-             fullWidth 
-             isLoading={loading} 
-             className="shadow-glow"
-             icon={currentStepId === 'review' ? <Sparkles size={18}/> : <ChevronRight size={18}/>}
-           >
-             {currentStepId === 'review' ? t('setup.generate') : t('setup.next')}
-           </NutriButton>
+        {/* NAVIGATION ACTIONS */}
+        <div className="pt-10 flex items-center justify-between mt-auto border-t border-neutral-100/50 relative z-20">
+           {stepIndex > 0 ? (
+             <button 
+                onClick={() => { vibrate(); prevStep(); }}
+                className="flex items-center gap-2 text-neutral-400 hover:text-neutral-600 font-medium transition-colors px-4 py-2 rounded-lg hover:bg-neutral-100/50"
+             >
+               <ArrowLeft size={20} /> <span className="hidden sm:inline">{t('setup.back')}</span>
+             </button>
+           ) : <div/>}
+
+           <div className="flex gap-4">
+              {/* Skip button for optional steps */}
+              {['allergy', 'activity', 'chrono'].includes(currentStepId) && (
+                  <button onClick={() => { vibrate(); skipStep(); }} className="text-neutral-400 hover:text-primary-500 font-medium text-sm transition-colors">
+                      Skip
+                  </button>
+              )}
+
+              <NutriButton 
+                onClick={() => { vibrate(); nextStep(); }} 
+                isLoading={loading} 
+                size="lg"
+                className="shadow-xl shadow-primary-500/20"
+                icon={currentStepId === 'review' ? <Sparkles size={20}/> : <ChevronRight size={20}/>}
+              >
+                {currentStepId === 'review' ? t('setup.generate') : t('setup.next')}
+              </NutriButton>
+           </div>
         </div>
 
       </div>
     </div>
   );
 };
+
+// Helper for the small edit icon
+const Edit2Icon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-300">
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+    </svg>
+);

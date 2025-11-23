@@ -60,6 +60,9 @@ export interface LifestyleData {
   exerciseFrequency: number; // times per week
   exerciseTypes: string[]; // Gym, Running, Yoga
   sleepQuality: WellnessLevel;
+  sleepDuration?: number; // hours
+  bedTime?: string; // "23:00"
+  wakeTime?: string; // "07:00"
   stressLevel: StressLevel;
   smoking: boolean;
   alcoholIntake: string; // e.g. "Socially", "None", "Daily"
@@ -80,9 +83,16 @@ export interface RoutineData {
   socialContext: string; // "Eats alone", "Family", "Social events"
 }
 
+export interface GoalItem {
+  id: string;
+  type: string;
+  priority: number; // 1 is highest
+}
+
 export interface GoalsData {
-  primary: "loss" | "maintain" | "gain" | "longevity" | "performance";
-  secondary: string[]; // e.g. "Cholesterol", "Sleep"
+  primary: "loss" | "maintain" | "gain" | "longevity" | "performance"; // Keeping purely for backward compatibility
+  prioritizedGoals: GoalItem[]; // New granular system
+  secondary: string[]; 
   targetWeight?: number;
   deadline?: string; // "6 months", "No rush"
   motivation?: string;

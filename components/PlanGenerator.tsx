@@ -44,7 +44,7 @@ export const PlanGenerator: React.FC<PlanGeneratorProps> = ({ profile, currentPl
               Clinical AI Nutritionist
             </h3>
             <p className="text-neutral-300 mt-2 max-w-lg leading-relaxed">
-              Generate a precision nutrition protocol based on your biometrics (Age: {profile.age}, Weight: {profile.weight}kg) and clinical goals.
+              Generate a precision nutrition protocol based on your biometrics (Age: {profile.biometrics.age}, Weight: {profile.biometrics.weight}kg) and clinical goals.
             </p>
           </div>
           <NutriButton 
@@ -72,7 +72,7 @@ export const PlanGenerator: React.FC<PlanGeneratorProps> = ({ profile, currentPl
               <p className="text-xs text-neutral-500 mt-0.5">Generated {new Date(currentPlan.generatedAt).toLocaleDateString()}</p>
             </div>
             <span className="px-3 py-1 bg-primary-100 text-primary-700 text-xs font-bold rounded-full uppercase tracking-wider">
-              {profile.goal} Phase
+              {profile.goals.primary} Phase
             </span>
           </div>
           

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAnimation } from '../contexts/AnimationContext';
 
 interface NutriButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
@@ -17,21 +18,39 @@ export const NutriButton: React.FC<NutriButtonProps> = ({
   className = '', 
   disabled,
   icon,
+  onClick,
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]";
+  const { isReducedMotion } = useAnimation();
+
+  // Base transitions and focus states
+  const baseStyles = `
+    inline-flex items-center justify-center font-semibold 
+    focus:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20 
+    disabled:opacity-60 disabled:cursor-not-allowed 
+    active:scale-[0.98] rounded-xl
+    ${isReducedMotion ? 'transition-none' : 'transition-all duration-300'}
+  `;
   
+  // Specific heights from Design System Spec: Primary/Lg = 52px, Md = 44px
   const sizes = {
-    sm: "px-3 py-1.5 text-xs rounded-lg",
-    md: "px-5 py-2.5 text-sm rounded-xl",
-    lg: "px-6 py-3.5 text-base rounded-xl"
+    sm: "h-[32px] px-3 text-xs",
+    md: "h-[44px] px-6 text-sm", // Standard secondary/input height
+    lg: "h-[52px] px-8 text-base" // Primary CTA height
   };
 
   const variants = {
-    primary: "bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/30 hover:-translate-y-0.5 border border-transparent focus-visible:ring-primary-500",
-    secondary: "bg-white text-neutral-700 border border-neutral-200 shadow-sm hover:bg-neutral-50 hover:border-neutral-300 focus-visible:ring-neutral-500",
-    ghost: "bg-transparent text-neutral-600 hover:bg-neutral-100 focus-visible:ring-neutral-500",
-    destructive: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 focus-visible:ring-red-500"
+    primary: "bg-primary-500 text-white shadow-lg shadow-primary-500/30 hover:bg-primary-600 hover:shadow-xl hover:shadow-primary-500/40 border border-transparent",
+    secondary: "bg-white text-primary-700 border border-primary-100 shadow-sm hover:bg-primary-50 hover:border-primary-200",
+    ghost: "bg-transparent text-primary-600 hover:bg-primary-50/50",
+    destructive: "bg-error-50 text-error-500 border border-error-100 hover:bg-error-100 focus-visible:ring-error-500/20"
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!disabled && navigator.vibrate) {
+      navigator.vibrate(5); // Light Haptic
+    }
+    if (onClick) onClick(e);
   };
 
   return (
@@ -44,6 +63,7 @@ export const NutriButton: React.FC<NutriButtonProps> = ({
         ${className}
       `}
       disabled={isLoading || disabled}
+      onClick={handleClick}
       {...props}
     >
       {isLoading ? (
@@ -64,5 +84,4 @@ export const NutriButton: React.FC<NutriButtonProps> = ({
   );
 };
 
-// Export as Button for backward compatibility if needed, but prefer NutriButton
 export const Button = NutriButton;

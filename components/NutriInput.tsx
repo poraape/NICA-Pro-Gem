@@ -1,5 +1,5 @@
 import React from 'react';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, AlertCircle } from 'lucide-react';
 
 interface NutriInputProps extends React.InputHTMLAttributes<HTMLInputElement | HTMLTextAreaElement> {
   label: string;
@@ -19,47 +19,56 @@ export const NutriInput: React.FC<NutriInputProps> = ({
   startIcon,
   className = '',
   id,
+  onBlur,
   ...props
 }) => {
   const inputId = id || `input-${label.replace(/\s+/g, '-').toLowerCase()}`;
   
-  const wrapperClasses = "relative group";
+  const wrapperClasses = "relative group mb-4";
+  
+  // Updated to match Design Tokens: 
+  // Height 44pt (standard) or 52pt (if styled as large), 
+  // Focus Glow: 0 0 0 4px rgba(32, 129, 146, 0.15)
   
   const baseInputClasses = `
-    block w-full px-4 py-3 
-    bg-white border rounded-xl 
+    block w-full px-4 
+    bg-white/80 backdrop-blur-sm border rounded-xl 
     text-neutral-900 placeholder-transparent 
-    transition-all duration-200
-    focus:outline-none focus:ring-2 focus:ring-offset-0
-    disabled:bg-neutral-50 disabled:text-neutral-400
-    ${startIcon ? 'pl-10' : ''}
+    transition-all duration-300 ease-out
+    focus:outline-none focus:bg-white
+    disabled:bg-neutral-100 disabled:text-neutral-400 disabled:cursor-not-allowed
+    ${startIcon ? 'pl-11' : ''}
     ${error 
-      ? 'border-red-300 focus:border-red-500 focus:ring-red-100' 
-      : 'border-neutral-200 hover:border-neutral-300 focus:border-primary-500 focus:ring-primary-100'}
+      ? 'border-error-500 focus:border-error-500 focus:shadow-[0_0_0_4px_rgba(192,21,48,0.15)]' 
+      : 'border-neutral-200 hover:border-primary-300 focus:border-primary-500 focus:shadow-[0_0_0_4px_rgba(32,129,146,0.15)]'}
     ${className}
   `;
 
   const labelClasses = `
-    absolute left-4 top-3 
-    text-neutral-500 text-sm 
-    transition-all duration-200 
+    absolute left-4 top-3.5 
+    text-neutral-500 text-sm font-medium
+    transition-all duration-300 ease-out
     pointer-events-none origin-[0]
     peer-placeholder-shown:scale-100 
     peer-placeholder-shown:translate-y-0.5 
-    peer-placeholder-shown:text-neutral-500
+    peer-placeholder-shown:text-neutral-400
     peer-focus:scale-85 
     peer-focus:-translate-y-3.5
     peer-focus:text-primary-600
-    ${startIcon ? 'peer-placeholder-shown:left-10' : ''}
+    ${startIcon ? 'peer-placeholder-shown:left-11' : ''}
     ${multiline ? 'peer-placeholder-shown:translate-y-0' : ''}
     -translate-y-3.5 scale-85
   `;
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (onBlur) onBlur(e);
+  };
 
   return (
     <div className={wrapperClasses}>
       <div className="relative">
         {startIcon && (
-          <div className="absolute left-3 top-3.5 text-neutral-400">
+          <div className={`absolute left-4 top-3.5 transition-colors ${error ? 'text-error-500' : 'text-neutral-400 group-focus-within:text-primary-500'}`}>
             {startIcon}
           </div>
         )}
@@ -67,15 +76,17 @@ export const NutriInput: React.FC<NutriInputProps> = ({
         {multiline ? (
           <textarea
             id={inputId}
-            className={`${baseInputClasses} min-h-[120px] resize-y peer pt-6`}
+            className={`${baseInputClasses} min-h-[120px] resize-y peer pt-6 pb-2 py-3.5`}
             placeholder={label}
+            onBlur={handleBlur}
             {...(props as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
           />
         ) : (
           <input
             id={inputId}
-            className={`${baseInputClasses} h-12 peer pt-5 pb-1`}
+            className={`${baseInputClasses} h-[48px] peer pt-5 pb-1`} // 48px to accommodate label float comfortably
             placeholder={label}
+            onBlur={handleBlur}
             {...(props as React.InputHTMLAttributes<HTMLInputElement>)}
           />
         )}
@@ -84,24 +95,25 @@ export const NutriInput: React.FC<NutriInputProps> = ({
           {label}
         </label>
         
-        {tooltip && (
+        {tooltip && !error && (
           <div className="absolute right-3 top-3.5 group/tooltip cursor-help z-10">
             <HelpCircle size={18} className="text-neutral-300 hover:text-primary-500 transition-colors" />
-            <div className="absolute right-0 bottom-full mb-2 w-64 p-3 bg-neutral-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none">
+            <div className="absolute right-0 bottom-full mb-2 w-64 p-3 bg-neutral-800/95 backdrop-blur text-white text-xs leading-relaxed rounded-xl shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none transform origin-bottom-right scale-95 group-hover/tooltip:scale-100 z-50">
               {tooltip}
               <div className="absolute bottom-0 right-2 translate-y-1/2 rotate-45 w-2 h-2 bg-neutral-800"></div>
             </div>
           </div>
         )}
+        
+        {error && (
+          <div className="absolute right-3 top-3.5 text-error-500 animate-[shake_0.4s_ease-in-out]">
+            <AlertCircle size={18} />
+          </div>
+        )}
       </div>
       
       {(error || helperText) && (
-        <div className={`mt-1.5 text-xs flex items-center gap-1 ${error ? 'text-red-500 font-medium' : 'text-neutral-500'}`}>
-           {error && (
-             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-             </svg>
-           )}
+        <div className={`mt-1.5 ml-1 text-xs flex items-center gap-1.5 font-medium animate-fade-in ${error ? 'text-error-500' : 'text-neutral-500'}`}>
            {error || helperText}
         </div>
       )}

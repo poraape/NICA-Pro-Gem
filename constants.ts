@@ -48,6 +48,10 @@ export const INITIAL_PROFILE: UserProfile = {
   
   goals: {
     primary: "loss",
+    prioritizedGoals: [
+      { id: "loss", type: "Weight Loss", priority: 1 },
+      { id: "energy", type: "Improve Energy", priority: 2 }
+    ],
     secondary: ["Improve energy", "Lower cholesterol"],
     deadline: "3 months",
     motivation: "Health and aesthetics"

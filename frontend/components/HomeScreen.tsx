@@ -71,7 +71,7 @@ export const HomeScreen: React.FC = () => (
   <div
     style={{
       minHeight: '100vh',
-      background: `linear-gradient(125deg, ${tokens.colors.action.primary} 0%, ${tokens.colors.cognitive.success} 55%, ${tokens.colors.cognitive.successPastel} 100%)`,
+      background: `linear-gradient(120deg, ${tokens.colors.action.primary} 0%, ${tokens.colors.cognitive.successPastel} 100%)`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -109,23 +109,11 @@ export const HomeScreen: React.FC = () => (
             fontSize: tokens.typography.size.body,
             color: tokens.colors.text.secondary,
             textAlign: 'center',
-            maxWidth: 380,
-            fontWeight: tokens.typography.weight.medium,
-            lineHeight: tokens.typography.lineHeight.relaxed,
-          }}
-        >
-          Bem-vindo ao <b>Nutri-Insight Pro</b> — cuidado gentil com evidências, nutrição clara e pequenos passos que se encaixam no seu ritmo.
-        </span>
-        <span
-          style={{
-            fontSize: tokens.typography.size.bodySmall,
-            color: tokens.colors.text.tertiary,
-            textAlign: 'center',
             maxWidth: 360,
-            lineHeight: tokens.typography.lineHeight.relaxed,
+            fontWeight: tokens.typography.weight.medium,
           }}
         >
-          Sinta-se acolhido para acompanhar seu bem-estar com leveza: cada dado vira cuidado e cada meta recebe apoio sereno.
+          Bem-vindo ao <b>Nutri-Insight Pro</b> — seu ecossistema inteligente de bem-estar, nutrição e ciência. Ao seu lado na jornada para hábitos melhores todos os dias.
         </span>
         {/* Métricas rápidas & CTA */}
         <div
@@ -136,9 +124,9 @@ export const HomeScreen: React.FC = () => (
             justifyContent: 'space-around',
           }}
         >
-          <QuickStat label="Seu ritmo" value="72%" color={tokens.colors.cognitive.success} icon="🍃" />
-          <QuickStat label="Plano do momento" value="Balanceada" color={tokens.colors.action.primary} icon="📋" />
-          <QuickStat label="Último cuidado" value="Registro hoje" color={tokens.colors.cognitive.info} icon="🥕" />
+          <QuickStat label="Progresso" value="72%" color={tokens.colors.cognitive.success} icon="🍀" />
+          <QuickStat label="Plano Ativo" value="Balanceada" color={tokens.colors.action.primary} icon="📋" />
+          <QuickStat label="Último registro" value="Hoje" color={tokens.colors.cognitive.info} icon="🥕" />
         </div>
         {/* Call to action */}
         <button
@@ -163,7 +151,7 @@ export const HomeScreen: React.FC = () => (
             e.currentTarget.style.boxShadow = tokens.effects.shadows.lg;
           }}
         >
-          Continuar com apoio
+          Começar Agora
         </button>
       </div>
     </GlassCard>

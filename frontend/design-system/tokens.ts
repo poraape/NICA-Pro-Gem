@@ -3,42 +3,42 @@ export const tokens = {
   colors: {
     // SISTEMA 1 (Rápido/Automático) - Cores de alta salience
     action: {
-      primary: '#1F9E9A', // Emerald-Teal: saúde + ciência acolhedora
-      primaryHover: '#187B78', // 15% darker = affordance de clique
-      primaryActive: '#115B58', // Feedback tátil visual
-      primaryGlow: 'rgba(31, 158, 154, 0.32)', // Glow suave para foco rápido
+      primary: '#208192', // Teal: Confiança + Calma científica (Sistema 1)
+      primaryHover: '#134252', // Darkening = affordance de clique
+      primaryActive: '#0F3340', // 20% darker = feedback tátil visual
+      primaryGlow: 'rgba(32, 129, 146, 0.3)', // Glow para atenção focal
     },
 
     // SISTEMA 2 (Lento/Deliberado) - Cores de suporte cognitivo
     cognitive: {
-      success: '#3DBB8F', // Verde-jade: recompensa calma
-      successPastel: '#B6F2D7', // Pastel refrescante = acolhimento pós-ação
-      warning: '#F2A659', // Âmbar suave = alerta sem alarme
-      error: '#D6455D', // Framboesa: stop signal menos agressivo
-      errorLight: '#FF7B90', // Erro recuperável
-      info: '#1F9E9A', // Teal consistente = confiança científica
+      success: '#22C55E', // Verde saturado = recompensa dopaminérgica
+      successPastel: '#86EFAC', // Pastel = redução de arousal após ação
+      warning: '#E87D4A', // Laranja = atenção sem alarme
+      error: '#C01530', // Vermelho = stop signal (alta priority)
+      errorLight: '#FF5459', // Lighter = erro recuperável
+      info: '#208192', // Teal reutilizado = consistência
     },
 
     // FUNDOS - MINIMIZAÇÃO DE CARGA COGNITIVA
     backgrounds: {
-      cream: '#FFF8F3', // Base quente = acolhimento visual
-      offWhite: '#F6FBF9', // Nuvem suave para elevação L1
+      cream: '#FFFCF9', // Base: 98% luminance = conforto visual
+      offWhite: '#FAFAF8', // Elevação L1: hierarquia sutil
       white: '#FFFFFF', // Elevação L2: cards principais
     },
 
     // TEXTOS - CONTRASTE WCAG AAA (≥7:1)
     text: {
-      primary: '#1F2626', // Charcoal levemente aquecido
-      secondary: '#2B2F2F', // 90% opacity: info secundária
-      tertiary: '#7A8281', // 60% opacity: metadados
+      primary: '#1F2121', // Charcoal 100%: ratio 14:1 vs cream
+      secondary: '#262828', // 90% opacity: info secundária
+      tertiary: '#777C7C', // 60% opacity: metadados
       inverse: '#FFFFFF', // Para fundos escuros
     },
 
     // GLASSMORPHISM - PROFUNDIDADE PERCEPTUAL
     glass: {
       white60: 'rgba(255, 255, 255, 0.6)',
-      border: 'rgba(240, 240, 240, 0.6)',
-      shadow: 'rgba(16, 61, 63, 0.08)',
+      border: 'rgba(245, 245, 245, 0.5)',
+      shadow: 'rgba(0, 0, 0, 0.08)',
     },
   },
 

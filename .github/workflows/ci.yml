@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mas_db
+          POSTGRES_USER: mas_user
+          POSTGRES_PASSWORD: mas_pass
+        ports: ["5432:5432"]
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install deps
+        run: |
+          cd backend
+          poetry install
+      - name: Lint/Type/Tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://mas_user:mas_pass@localhost:5432/mas_db
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          poetry run ruff check .
+          poetry run mypy app
+          poetry run pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: |
+          cd frontend
+          npm ci
+      - name: Lint/Type/Test/Build
+        run: |
+          cd frontend
+          npm run lint
+          npm run type-check
+          npm run test -- --runInBand
+          npm run build

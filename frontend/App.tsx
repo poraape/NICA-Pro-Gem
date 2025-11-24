@@ -8,13 +8,14 @@ import { ProfileSetup } from './components/ProfileSetup';
 import { WeeklyPlanView } from './components/WeeklyPlanView';
 import { Dashboard } from './components/Dashboard';
 import { Settings } from './components/Settings';
-import { generateWeeklyPlan, generateClinicalReport } from './services/geminiService';
+import { enqueuePlan, getPlanStatus, subscribeAgentEvents, fetchLatestPlan, fetchLatestReport } from './services/geminiService';
 import { Loader2 } from 'lucide-react';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { AnimationProvider } from './contexts/AnimationContext';
 import { NotificationProvider, useNotification } from './contexts/NotificationContext';
 import { GestureHandler } from './components/GestureHandler';
 import { LayoutWrapper } from './components/LayoutWrapper';
+import { PlanHistory } from './components/PlanHistory';
 
 const AppContent: React.FC = () => {
   const { t, language } = useLanguage();
@@ -32,6 +33,16 @@ const AppContent: React.FC = () => {
     logs: [], // Legacy mock for dashboard
   });
 
+  React.useEffect(() => {
+    const unsubscribe = subscribeAgentEvents((evt) => {
+      if (typeof evt !== 'object' || !evt.correlation_id) return;
+      if (evt.event === 'completed') {
+        showToast('Plan generation completed', 'success');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Handlers
   const handleProfileSave = async (profile: UserProfile) => {
     setIsGenerating(true);
@@ -39,29 +50,75 @@ const AppContent: React.FC = () => {
     // Inject current language selection into profile for AI context
     const profileWithLang = { ...profile, language };
 
-    // Generate the Weekly Plan immediately after profile setup
-    const plan = await generateWeeklyPlan(profileWithLang);
-    let report: ClinicalReport | null = null;
-    
-    if (plan) {
-       // If plan success, generate report
-       report = await generateClinicalReport(profileWithLang, plan);
-       unlockAchievement('Protocol Initiated', 'Your first clinical plan is ready.');
-    } else {
-       showToast('Failed to generate plan. Please try again.', 'error');
+    try {
+      const { task_id } = await enqueuePlan(profileWithLang);
+      const planResult = await waitForPlanCompletion(task_id, profileWithLang.id);
+      if (!planResult?.weeklyPlan) {
+        showToast('Failed to generate plan. Please try again.', 'error');
+        return;
+      }
+
+      unlockAchievement('Protocol Initiated', 'Your first clinical plan is ready.');
+      setData(prev => ({
+        ...prev,
+        profile: profileWithLang,
+        weeklyPlan: planResult.weeklyPlan!,
+        clinicalReport: planResult.clinicalReport,
+        logs: MOCK_LOGS,
+      }));
+      setIsOnboarding(false);
+      setActiveTab('health-stats');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to enqueue plan generation.', 'error');
+    } finally {
+      setIsGenerating(false);
     }
-    
-    setData(prev => ({
-      ...prev,
-      profile: profileWithLang,
-      weeklyPlan: plan,
-      clinicalReport: report,
-      logs: MOCK_LOGS, // Init mocks
-    }));
-    
-    setIsOnboarding(false);
-    setIsGenerating(false);
-    setActiveTab('health-stats'); // Land on stats page
+  };
+
+  const waitForPlanCompletion = (
+    taskId: string,
+    profileId: string,
+  ): Promise<{ weeklyPlan: WeeklyPlan | null; clinicalReport: ClinicalReport | null } | null> => {
+    let resolved = false;
+    return new Promise(async (resolve) => {
+      const unsubscribe = subscribeAgentEvents((evt) => {
+        if (typeof evt !== 'object') return;
+        if (evt.correlation_id && evt.event === 'completed' && evt.payload?.task_id === taskId) {
+          resolved = true;
+          unsubscribe();
+          resolve({
+            weeklyPlan: evt.payload.plan || null,
+            clinicalReport: evt.payload.clinical_report || null,
+          });
+        }
+      });
+
+      // Fallback polling if WS event not received in time
+      const maxAttempts = 10;
+      let attempts = 0;
+      while (!resolved && attempts < maxAttempts) {
+        const status = await getPlanStatus(taskId);
+        if (status.status === 'success') {
+          const latestPlan = await fetchLatestPlan(profileId);
+          const latestReport = await fetchLatestReport(profileId);
+          resolved = true;
+          unsubscribe();
+          resolve({
+            weeklyPlan: latestPlan || status.plan || null,
+            clinicalReport: latestReport || status.clinical_report || null,
+          });
+          return;
+        }
+        await new Promise(res => setTimeout(res, 2000));
+        attempts += 1;
+      }
+
+      if (!resolved) {
+        unsubscribe();
+        resolve(null);
+      }
+    });
   };
 
   const handleUpdatePlan = (updatedPlan: WeeklyPlan) => {
@@ -132,10 +189,15 @@ const AppContent: React.FC = () => {
           
           {/* Weekly Plan View */}
           {activeTab === 'weekly-plan' && data.weeklyPlan && (
-            <WeeklyPlanView 
-              plan={data.weeklyPlan} 
-              onUpdatePlan={handleUpdatePlan} 
-            />
+            <>
+              <WeeklyPlanView 
+                plan={data.weeklyPlan} 
+                onUpdatePlan={handleUpdatePlan} 
+              />
+              {data.profile?.id && (
+                <PlanHistory profileId={data.profile.id} />
+              )}
+            </>
           )}
           
           {/* Health Stats / Dashboard View */}

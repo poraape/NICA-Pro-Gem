@@ -28,7 +28,48 @@ export enum Gender {
   OTHER = "Other"
 }
 
-export type DietaryPreference = 'omnivore' | 'vegetarian' | 'vegan' | 'pescatarian' | 'keto' | 'paleo' | 'mediterranean';
+export type DietProfileKey =
+  | 'mediterranean'
+  | 'low_carb'
+  | 'plant_based'
+  | 'ketogenic'
+  | 'paleolithic'
+  | 'dash'
+  | 'pescatarian'
+  | 'vegan'
+  | 'ovo_lacto'
+  | 'halal'
+  | 'kosher'
+  | 'ayurvedic'
+  | 'macrobiotic'
+  | 'buddhist'
+  | 'hare_krishna'
+  | 'rastafari_ital'
+  | 'ramadan'
+  | 'yom_kippur'
+  | 'lent'
+  | 'nordestina'
+  | 'amazonica'
+  | 'caipira'
+  | 'oriental'
+  | 'africana'
+  | 'urban_br'
+  | 'colonial'
+  | 'festivals'
+  | 'tribal'
+  | 'dash_mind';
+
+export type DietaryPreference =
+  | 'omnivore'
+  | 'vegetarian'
+  | 'vegan'
+  | 'pescatarian'
+  | 'keto'
+  | 'paleo'
+  | 'mediterranean'
+  | 'low_carb'
+  | 'plant_based'
+  | 'dash';
 export type CookingTime = 'low' | 'medium' | 'high'; 
 export type WellnessLevel = 'poor' | 'average' | 'good' | 'excellent';
 export type StressLevel = 'low' | 'moderate' | 'high';
@@ -79,6 +120,12 @@ export interface RoutineData {
   dislikes: string[]; // Foods to avoid
   favorites: string[]; // Foods to include
   culturalRestrictions: string[]; // Kosher, Halal
+  dietaryProfiles?: DietProfileKey[]; // Multi-select archetypes
+  regionalStyles?: DietProfileKey[];
+  spiritualPractices?: DietProfileKey[];
+  ritualCalendar?: string[];
+  personalNarrative?: string;
+  taboos?: string[];
   fastingWindow?: string; // e.g. "16:8", "None"
   socialContext: string; // "Eats alone", "Family", "Social events"
 }

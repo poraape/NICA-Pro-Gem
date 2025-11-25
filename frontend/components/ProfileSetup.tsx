@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { UserProfile, Gender, ActivityLevel, OnboardingMode, Biometrics, GoalItem, RoutineData } from '../types';
+import { UserProfile, Gender, ActivityLevel, OnboardingMode, Biometrics, GoalItem, RoutineData, DietProfileKey } from '../types';
 import { NutriInput } from './NutriInput';
 import { NutriSelect } from './NutriSelect';
 import { NutriButton } from './Button';
@@ -7,9 +7,10 @@ import {
   User, Ruler, Weight, Target, ChevronRight, Sparkles, Clock, 
   Stethoscope, Activity, Lock, Utensils, CheckCircle2, ArrowLeft, 
   Zap, Heart, Pill, Moon, AlertCircle, GripVertical, ChevronUp, ChevronDown,
-  AlertTriangle, Watch, Calendar
+  AlertTriangle, Watch, Calendar, NotebookPen, Map, HandHeart
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { analyzeNarrative, dietStyleOptions, regionalOptions, spiritualOptions, getIdentityLabel, DietIdentityOption } from '../utils/personalization';
 
 interface ProfileSetupProps {
   initialData?: Partial<UserProfile>;
@@ -63,7 +64,15 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
       sleepDuration: 7, bedTime: '23:00', wakeTime: '07:00'
     },
     routine: { 
-      dietaryPreference: 'omnivore', mealsPerDay: 3, preferredMealTimes: '08:00, 13:00, 20:00', 
+      dietaryPreference: 'omnivore',
+      dietaryProfiles: ['mediterranean'],
+      regionalStyles: [],
+      spiritualPractices: [],
+      personalNarrative: '',
+      ritualCalendar: [],
+      taboos: [],
+      mealsPerDay: 3,
+      preferredMealTimes: '08:00, 13:00, 20:00', 
       cookingTime: 'medium', allergies: [], intolerances: [], dislikes: [], favorites: [], culturalRestrictions: [], socialContext: 'Family' 
     },
     goals: { primary: 'loss', secondary: [], prioritizedGoals: [
@@ -82,11 +91,15 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
     conditions: initialData?.clinical?.medicalConditions?.join(', ') || '',
     dislikes: initialData?.routine?.dislikes?.join(', ') || '',
     favorites: initialData?.routine?.favorites?.join(', ') || '',
+    taboos: initialData?.routine?.taboos?.join(', ') || initialData?.routine?.culturalRestrictions?.join(', ') || '',
   });
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [liveMetrics, setLiveMetrics] = useState({ bmr: 0, tdee: 0 });
+  const [narrativeInsights, setNarrativeInsights] = useState(() =>
+    analyzeNarrative(profile.routine?.personalNarrative || '', (profile.routine as RoutineData) || {} as RoutineData)
+  );
 
   const currentSteps = mode === 'express' ? steps.express : steps.complete;
   const currentStepId = currentSteps[stepIndex]?.id || 'mode';
@@ -114,6 +127,20 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
       }
     }
   }, [profile.biometrics, profile.lifestyle]);
+
+  useEffect(() => {
+    setNarrativeInsights(
+      analyzeNarrative(
+        profile.routine?.personalNarrative || '',
+        (profile.routine as RoutineData) || ({} as RoutineData)
+      )
+    );
+  }, [
+    profile.routine?.personalNarrative,
+    profile.routine?.dietaryProfiles,
+    profile.routine?.regionalStyles,
+    profile.routine?.spiritualPractices
+  ]);
 
   const vibrate = (pattern: number | number[] = 5) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -150,8 +177,26 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
     if (key === 'allergies') handleRoutineChange('allergies', arrayVal);
     if (key === 'dislikes') handleRoutineChange('dislikes', arrayVal);
     if (key === 'favorites') handleRoutineChange('favorites', arrayVal);
+    if (key === 'taboos') {
+      handleRoutineChange('taboos', arrayVal);
+      handleRoutineChange('culturalRestrictions', arrayVal);
+    }
     if (key === 'meds') setProfile(p => ({...p, clinical: {...p.clinical!, medications: arrayVal}}));
     if (key === 'conditions') setProfile(p => ({...p, clinical: {...p.clinical!, medicalConditions: arrayVal}}));
+  };
+
+  const toggleIdentitySelection = (field: 'dietaryProfiles' | 'regionalStyles' | 'spiritualPractices', value: DietProfileKey) => {
+    setProfile(prev => {
+      const current = (prev.routine?.[field] as DietProfileKey[]) || [];
+      const exists = current.includes(value);
+      const updated = exists ? current.filter(v => v !== value) : [...current, value];
+      return { ...prev, routine: { ...prev.routine!, [field]: updated } };
+    });
+    vibrate(10);
+  };
+
+  const handleNarrativeChange = (val: string) => {
+    setProfile(prev => ({ ...prev, routine: { ...prev.routine!, personalNarrative: val } }));
   };
 
   const validateStep = () => {
@@ -239,6 +284,45 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
        <p className="text-neutral-500 mt-2 text-lg">{sub}</p>
     </div>
   );
+
+  const renderIdentityCard = (
+    option: DietIdentityOption,
+    selected: DietProfileKey[],
+    onToggle: (value: DietProfileKey) => void
+  ) => {
+    const isSelected = selected.includes(option.value);
+    return (
+      <button
+        key={option.value}
+        onClick={() => onToggle(option.value)}
+        className={`relative w-full text-left p-4 rounded-2xl border transition-all group overflow-hidden bg-gradient-to-r ${option.accent || 'from-white to-white'} ${
+          isSelected ? 'border-primary-400 shadow-glow ring-2 ring-primary-200' : 'border-neutral-200 hover:border-primary-200'
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">{option.emoji || '✨'}</span>
+          <div>
+            <p className="font-semibold text-neutral-800">{option.label}</p>
+            <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{option.description}</p>
+          </div>
+        </div>
+        {option.examples?.length ? (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {option.examples.map((ex) => (
+              <span key={ex} className="px-2 py-1 rounded-full bg-white/70 border text-[11px] text-neutral-500 border-neutral-200">
+                {ex}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {isSelected && (
+          <span className="absolute top-3 right-3 text-xs font-semibold text-primary-600 bg-white px-2 py-1 rounded-full shadow-sm">
+            {t('common.recommended')}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className={`min-h-[90vh] flex flex-col items-center justify-center ${!isEditing ? 'py-12' : ''}`}>
@@ -338,12 +422,124 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
         {/* --- M3: PREFERENCES (Diet) --- */}
         {currentStepId === 'diet' && (
           <div className="space-y-8 relative z-10 animate-fade-in">
-             {renderHeader(t('setup.diet.title'), t('setup.diet'), <Utensils size={32}/>)}
-             <div className="grid grid-cols-2 gap-6">
-                <NutriSelect label={t('label.diet')} options={['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'mediterranean'].map(v => ({value: v, label: v}))} value={profile.routine?.dietaryPreference} onChange={e => handleRoutineChange('dietaryPreference', e.target.value)} />
-                <NutriSelect label={t('label.cooking')} options={['low', 'medium', 'high'].map(v => ({value: v, label: t(`opt.${v}`)}))} value={profile.routine?.cookingTime} onChange={e => handleRoutineChange('cookingTime', e.target.value)} />
+             {renderHeader(t('setup.diet.title'), t('setup.diet.desc'), <Utensils size={32}/>)}
+             
+             <div className="bg-white/70 border border-neutral-200 rounded-3xl p-5 shadow-glass">
+               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                 <div>
+                   <p className="text-xs font-semibold uppercase tracking-wide text-primary-600">{t('setup.diet.multi_title')}</p>
+                   <p className="text-neutral-600 text-sm">{t('setup.diet.multi_desc')}</p>
+                 </div>
+                 <span className="text-xs bg-primary-50 text-primary-700 px-3 py-1 rounded-full border border-primary-100 shadow-inner">{t('setup.diet.badge')}</span>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                 {dietStyleOptions.map((opt) => renderIdentityCard(opt, profile.routine?.dietaryProfiles || [], (value) => toggleIdentitySelection('dietaryProfiles', value)))}
+               </div>
              </div>
-             <NutriInput label={t('label.dislikes')} value={inputs.dislikes} onChange={e => handleTextListChange('dislikes', e.target.value)} placeholder="E.g. Cilantro, Okra..." />
+
+             <div className="bg-white/70 border border-emerald-100 rounded-3xl p-5 shadow-glass">
+               <div className="flex items-start gap-3 mb-4">
+                 <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700"><Map size={18}/></div>
+                 <div>
+                   <p className="text-sm font-semibold text-neutral-800">{t('setup.diet.regionals')}</p>
+                   <p className="text-neutral-600 text-sm">{t('setup.diet.regionals.desc')}</p>
+                 </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                 {regionalOptions.map((opt) => renderIdentityCard(opt, profile.routine?.regionalStyles || [], (value) => toggleIdentitySelection('regionalStyles', value)))}
+               </div>
+             </div>
+
+             <div className="bg-white/70 border border-indigo-100 rounded-3xl p-5 shadow-glass">
+               <div className="flex items-start gap-3 mb-4">
+                 <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700"><HandHeart size={18}/></div>
+                 <div>
+                   <p className="text-sm font-semibold text-neutral-800">{t('setup.diet.spiritual')}</p>
+                   <p className="text-neutral-600 text-sm">{t('setup.diet.spiritual.desc')}</p>
+                 </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                 {spiritualOptions.map((opt) => renderIdentityCard(opt, profile.routine?.spiritualPractices || [], (value) => toggleIdentitySelection('spiritualPractices', value)))}
+               </div>
+             </div>
+
+             <div className="bg-white/80 border border-neutral-200 rounded-3xl p-6 shadow-glass space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <NutriSelect 
+                    label={t('label.diet')} 
+                    options={[
+                      { value: 'omnivore', label: t('opt.omnivore') || 'Onívoro flex' },
+                      { value: 'vegetarian', label: t('opt.vegetarian') || 'Vegetariano' },
+                      { value: 'vegan', label: t('opt.vegan') || 'Vegano' },
+                      { value: 'plant_based', label: t('opt.plant_based') || 'Plant-based' },
+                      { value: 'pescatarian', label: t('opt.pescatarian') || 'Pescetariana' },
+                      { value: 'low_carb', label: t('opt.low_carb') || 'Low-carb' },
+                      { value: 'keto', label: t('opt.keto') || 'Cetogênica' },
+                      { value: 'paleo', label: t('opt.paleo') || 'Paleolítica' },
+                      { value: 'dash', label: t('opt.dash') || 'DASH' },
+                      { value: 'mediterranean', label: t('opt.mediterranean') || 'Mediterrânea' },
+                    ]} 
+                    value={profile.routine?.dietaryPreference} 
+                    onChange={e => handleRoutineChange('dietaryPreference', e.target.value)} 
+                  />
+                  <NutriSelect 
+                    label={t('label.cooking')} 
+                    options={['low', 'medium', 'high'].map(v => ({value: v, label: t(`opt.${v}`)}))} 
+                    value={profile.routine?.cookingTime} 
+                    onChange={e => handleRoutineChange('cookingTime', e.target.value)} 
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <NutriInput label={t('label.dislikes')} value={inputs.dislikes} onChange={e => handleTextListChange('dislikes', e.target.value)} placeholder={t('placeholder.dislikes')} />
+                  <NutriInput label={t('label.taboos')} value={inputs.taboos} onChange={e => handleTextListChange('taboos', e.target.value)} placeholder={t('placeholder.taboos')} />
+                </div>
+             </div>
+
+             <div className="bg-gradient-to-r from-amber-50 via-white to-primary-50 border border-primary-100 rounded-3xl p-6 shadow-glass space-y-4">
+               <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center text-primary-700">
+                    <NotebookPen size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-800">{t('setup.story.title')}</p>
+                    <p className="text-neutral-600 text-sm">{t('setup.story.subtitle')}</p>
+                  </div>
+               </div>
+               <textarea 
+                 value={profile.routine?.personalNarrative || ''}
+                 onChange={e => handleNarrativeChange(e.target.value)}
+                 placeholder={t('setup.story.placeholder')}
+                 className="w-full min-h-[140px] rounded-2xl border border-neutral-200 bg-white/80 px-4 py-3 text-neutral-800 shadow-inner focus:outline-none focus:ring-4 focus:ring-primary-100"
+               />
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-primary-600 mb-2">{t('setup.story.insights')}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(narrativeInsights.tags.length ? narrativeInsights.tags : [t('setup.story.empty')]).map(tag => (
+                        <span key={tag} className="px-2 py-1 rounded-full bg-primary-50 text-primary-700 text-[11px] font-semibold border border-primary-100">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-emerald-600 mb-2">{t('setup.story.adaptations')}</p>
+                    <ul className="space-y-2 text-sm text-neutral-600 list-disc list-inside">
+                      {(narrativeInsights.adaptations.length ? narrativeInsights.adaptations : [t('setup.story.adaptations.empty')]).map(item => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
+                    <p className="text-xs uppercase tracking-wide font-semibold text-indigo-600 mb-2">{t('setup.story.ritual')}</p>
+                    <ul className="space-y-2 text-sm text-neutral-600 list-disc list-inside">
+                      {(narrativeInsights.ritualNotices.length ? narrativeInsights.ritualNotices : [t('setup.story.ritual.empty')]).map(item => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 text-xs text-neutral-500">{narrativeInsights.celebration}</p>
+                  </div>
+               </div>
+             </div>
           </div>
         )}
 
@@ -523,6 +719,21 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialData, onSave,
                  {profile.clinical?.medicalConditions?.map(c => <span key={c} className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold border border-red-100">{c}</span>)}
                  {profile.routine?.dietaryPreference && <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100" onClick={() => jumpToStep('diet')}>{profile.routine.dietaryPreference}</span>}
                  <span className="px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold border border-neutral-200" onClick={() => jumpToStep('activity')}>{t(`opt.${profile.lifestyle?.activityLevel?.toLowerCase().split(' ')[0]}`) || profile.lifestyle?.activityLevel}</span>
+                 {(profile.routine?.dietaryProfiles || []).map((dp) => (
+                   <span key={dp} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-bold border border-primary-100" onClick={() => jumpToStep('diet')}>
+                     {getIdentityLabel(dp)}
+                   </span>
+                 ))}
+                 {(profile.routine?.regionalStyles || []).map((dp) => (
+                   <span key={dp} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100" onClick={() => jumpToStep('diet')}>
+                     {getIdentityLabel(dp)}
+                   </span>
+                 ))}
+                 {(profile.routine?.spiritualPractices || []).map((dp) => (
+                   <span key={dp} className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100" onClick={() => jumpToStep('diet')}>
+                     {getIdentityLabel(dp)}
+                   </span>
+                 ))}
               </div>
            </div>
         )}

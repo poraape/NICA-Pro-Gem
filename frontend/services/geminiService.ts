@@ -1,4 +1,4 @@
-import { UserProfile, WeeklyPlan, ClinicalReport } from "../types";
+import { UserProfile, WeeklyPlan, ClinicalReport, MealItem, Language } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 const WS_BASE = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
@@ -67,4 +67,49 @@ export const subscribeAgentEvents = (onEvent: (msg: any) => void) => {
     }
   };
   return () => ws.close();
+};
+
+/**
+ * Lightweight meal text analyzer used by SmartMealInput.
+ * Tries backend endpoint when available and falls back to a local heuristic so the UI keeps working.
+ */
+export const analyzeMealText = async (text: string, language: Language): Promise<MealItem | null> => {
+  const payload = { text, language };
+  try {
+    const res = await fetch(`${API_BASE}/api/analysis/meal`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        id: data.id || (crypto.randomUUID ? crypto.randomUUID() : `meal-${Date.now()}`),
+        name: data.name || text || "Meal",
+        description: data.description || text,
+        calories: data.calories ?? 0,
+        macros: data.macros || { protein: 0, carbs: 0, fats: 0 },
+        timestamp: data.timestamp || new Date().toISOString(),
+        isEdited: true,
+      };
+    }
+  } catch (err) {
+    console.warn("analyzeMealText falling back to client heuristic:", err);
+  }
+
+  // Fallback: naive estimate based on text length
+  const baseCals = Math.min(900, Math.max(250, text.length * 8));
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : `meal-${Date.now()}`,
+    name: text.trim() || "Meal",
+    description: text,
+    calories: Math.round(baseCals),
+    macros: {
+      protein: Math.round(baseCals * 0.3 / 4),
+      carbs: Math.round(baseCals * 0.45 / 4),
+      fats: Math.round(baseCals * 0.25 / 9),
+    },
+    timestamp: new Date().toISOString(),
+    isEdited: true,
+  };
 };

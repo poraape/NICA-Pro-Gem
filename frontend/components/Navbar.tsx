@@ -109,7 +109,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
       
       {/* Mobile Nav */}
       <div className="md:hidden border-t border-neutral-100 flex justify-around p-2 bg-white/95 backdrop-blur safe-area-bottom">
-          {[...navItems, { id: 'setup', label: 'Profile', icon: User }].map((item) => {
+          {[...navItems, { id: 'setup', label: t('nav.profile'), icon: User }].map((item) => {
               const isActive = activeTab === item.id;
               const Icon = item.icon;
               return (

@@ -237,3 +237,6 @@ export const Button: React.FC<ButtonProps> = ({
     </button>
   );
 };
+
+// Alias used across the app for semantic naming
+export const NutriButton = Button;

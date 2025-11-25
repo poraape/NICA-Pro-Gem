@@ -16,6 +16,7 @@ import { NotificationProvider, useNotification } from './contexts/NotificationCo
 import { GestureHandler } from './components/GestureHandler';
 import { LayoutWrapper } from './components/LayoutWrapper';
 import { PlanHistory } from './components/PlanHistory';
+import { composeCelebrationMessage, getIdentityLabel } from './utils/personalization';
 
 const AppContent: React.FC = () => {
   const { t, language } = useLanguage();
@@ -37,11 +38,11 @@ const AppContent: React.FC = () => {
     const unsubscribe = subscribeAgentEvents((evt) => {
       if (typeof evt !== 'object' || !evt.correlation_id) return;
       if (evt.event === 'completed') {
-        showToast('Plan generation completed', 'success');
+        showToast(t('app.plan_ready'), 'success');
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [t]);
 
   // Handlers
   const handleProfileSave = async (profile: UserProfile) => {
@@ -58,7 +59,8 @@ const AppContent: React.FC = () => {
         return;
       }
 
-      unlockAchievement('Protocol Initiated', 'Your first clinical plan is ready.');
+      const celebrationMessage = composeCelebrationMessage(profileWithLang);
+      unlockAchievement('Ritual respeitado', 'Plano criado com suas raízes e crenças.');
       setData(prev => ({
         ...prev,
         profile: profileWithLang,
@@ -66,6 +68,7 @@ const AppContent: React.FC = () => {
         clinicalReport: planResult.clinicalReport,
         logs: MOCK_LOGS,
       }));
+      showToast(celebrationMessage, 'success');
       setIsOnboarding(false);
       setActiveTab('health-stats');
     } catch (err) {
@@ -123,7 +126,12 @@ const AppContent: React.FC = () => {
 
   const handleUpdatePlan = (updatedPlan: WeeklyPlan) => {
     setData(prev => ({ ...prev, weeklyPlan: updatedPlan }));
-    showToast('Weekly protocol updated', 'success');
+    const identity = getIdentityLabel(
+      data.profile?.routine?.regionalStyles?.[0] ||
+      data.profile?.routine?.spiritualPractices?.[0] ||
+      data.profile?.routine?.dietaryProfiles?.[0]
+    );
+    showToast(`Plano ajustado com carinho pelo seu perfil ${identity}`, 'success');
   };
 
   const handleDeleteAccount = () => {

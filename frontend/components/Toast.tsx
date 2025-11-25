@@ -54,7 +54,7 @@ export const ToastContainer: React.FC<ToastProps> = ({
       aria-label="Notifications"
     >
       {visibleMessages.map((msg) => (
-        <Toast key={msg.id} {...msg} onDismiss={() => onDismiss(msg.id)} />
+        <SingleToast key={msg.id} {...msg} onDismiss={() => onDismiss(msg.id)} />
       ))}
     </div>
   );
@@ -64,7 +64,7 @@ interface SingleToastProps extends ToastMessage {
   onDismiss: () => void;
 }
 
-const Toast: React.FC<SingleToastProps> = ({
+const SingleToast: React.FC<SingleToastProps> = ({
   message,
   type,
   duration,
@@ -294,5 +294,25 @@ export const useToast = () => {
   }, []);
 
   return { messages, show, dismiss };
+};
+
+// Legacy single-toast API used by NotificationContext
+type LegacyToastProps = {
+  message: string;
+  type: ToastType;
+  isVisible: boolean;
+  onClose: () => void;
+};
+
+export const Toast: React.FC<LegacyToastProps> = ({ message, type, isVisible, onClose }) => {
+  if (!isVisible) return null;
+  return (
+    <ToastContainer
+      messages={[{ id: 'legacy-toast', type, message }]}
+      onDismiss={onClose}
+      position="top-center"
+      maxVisible={1}
+    />
+  );
 };
 
